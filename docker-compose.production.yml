@@ -51,6 +51,14 @@ services:
       - db
     platform: linux/amd64
 
+  lightrag:
+    image: newtonkoh/lightrag:latest
+    ports:
+      - "9621:9621"
+    networks:
+      - backend  # or whichever network it should be connected to
+    restart: always
+
   ## can only be accessed within backend network
   db:
     image: postgres:13-alpine

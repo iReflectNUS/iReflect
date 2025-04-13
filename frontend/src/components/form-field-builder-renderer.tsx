@@ -4,6 +4,7 @@ import {
   CONTENT,
   DESCRIPTION,
   HAS_FEEDBACK,
+  HAS_PLAYTEST_FEEDBACK,
   LABEL,
   PLACEHOLDER,
   REQUIRED,
@@ -123,6 +124,18 @@ function FormFieldBuilderRenderer({ formFieldType, builderName }: Props) {
             key={hasFeedbackFieldName}
             name={hasFeedbackFieldName}
             label={<Text size="sm">Enable automated reflective feedback</Text>}
+          />
+        );
+      }
+
+      case HAS_PLAYTEST_FEEDBACK: {
+        const hasPlayTestFeedbackFieldName = `${builderName}.${HAS_PLAYTEST_FEEDBACK}`;
+
+        return (
+          <SwitchField
+            key={hasPlayTestFeedbackFieldName}
+            name={hasPlayTestFeedbackFieldName}
+            label={<Text size="sm">Enable playtest feedback</Text>}
           />
         );
       }

@@ -74,7 +74,7 @@ function FormFieldFeedbackRenderer({ name, question, collectData }: Props) {
       return;
     }
 
-    // If form in test mode, responses not considered
+    //If form in test mode, responses not considered
     if (feedbackContext.testMode || !feedbackContext.submissionId) {
       return;
     }
@@ -86,8 +86,11 @@ function FormFieldFeedbackRenderer({ name, question, collectData }: Props) {
     };
 
     try {
+      
       await tryStoreInitialResponse(feedbackPostData).unwrap();
+     
     } catch (error) {
+     
       resolveError(error);
     }
   };

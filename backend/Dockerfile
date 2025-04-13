@@ -24,6 +24,8 @@ RUN apk update && \
     && pip install --no-cache-dir -r requirements.txt \
     && apk del --no-cache .build-deps
 
+ADD entrypoint.sh ./entrypoint.sh 
+RUN chmod +x ./entrypoint.sh
 ## copy project to working directory
 COPY . .
 

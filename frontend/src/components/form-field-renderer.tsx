@@ -1,13 +1,15 @@
-import { createStyles, Group, ScrollArea, Stack } from "@mantine/core";
+import { createStyles, Group, ScrollArea, Stack, Select } from "@mantine/core";
 import { FormField, FormFieldType } from "../types/templates";
 import CheckboxGroupField from "./checkbox-group-field";
 import FormFieldCommentButton from "./form-field-comment-button";
 import FormFieldFeedbackRenderer from "./form-field-feedback-renderer";
+import FormFieldPlaytestFeedbackRenderer from "./form-field-playtest-feedback-renderer";
 import NumericField from "./numeric-field";
 import RadioGroupField from "./radio-group-field";
 import TextField from "./text-field";
 import TextViewer from "./text-viewer";
 import TextareaField from "./textarea-field";
+import { Controller, useFormContext } from "react-hook-form";
 
 const useStyles = createStyles({
   // NOTE: currently there is no way to access the container for checkbox and radio options
@@ -18,6 +20,28 @@ const useStyles = createStyles({
     },
   },
 });
+
+const genreOptions = [
+  { value: "RPG", label: "Role Playing Game (RPG)" },
+  { value: "Action", label: "Action" },
+  { value: "Ddventure", label: "Adventure" },
+  { value: "Simulation", label: "Simulation" },
+  { value: "Strategy", label: "Strategy" },
+  { value: "Sports", label: "Sports" },
+  { value: "Educational/Scientific", label: "Educational/Scientific" },
+  { value: "Puzzle", label: "Puzzle" },
+];
+
+const mechanicOptions = [
+  { value: "Mobility & Movement", label: "Mobility & Movement" },
+  { value: "Combat & Attack", label: "Combat & Attack" },
+  { value: "Resource Management & Economy", label: "Resource Management & Economy" },
+  { value: "Puzzle & Interaction", label: "Puzzle & Interaction" },
+  { value: "AI & Character Interaction", label: "AI & Character Interaction" },
+  { value: "Progression & Upgrade", label: "Progression & Upgrade" },
+  { value: "Environmental Interaction", label: "Environmental Interaction" },
+  { value: "Multiplayer & Social", label: "Multiplayer & Social" },
+];
 
 type Props = {
   name: string;
@@ -35,6 +59,53 @@ function FormFieldRenderer({
   withComments,
 }: Props) {
   const { classes } = useStyles();
+
+  const { control } = useFormContext();
+  const genreDropdownComponent = (() => {
+    if (formField.type !== FormFieldType.TextArea || !formField.hasPlaytestFeedback) {
+      return null;
+    }
+
+    return (
+      <Controller
+        name="Genre"
+        control={control}
+        rules={{ required: true }}
+        render={({ field }) => (
+          <Select
+            label="Select the Genre of the game you are playtesting"
+            placeholder="Select genre"
+            data={genreOptions}
+            required
+            {...field}
+          />
+        )}
+      />
+    );
+  })();
+
+  const mechanicDropdownComponent = (() => {
+    if (formField.type !== FormFieldType.TextArea || !formField.hasPlaytestFeedback) {
+      return null;
+    }
+
+    return (
+      <Controller
+        name="Mechanic"
+        control={control}
+        rules={{ required: true }}
+        render={({ field }) => (
+          <Select
+            label="Select the MAIN Mechanic of the game you are playtesting"
+            placeholder="Select MAIN mechanic"
+            data={mechanicOptions}
+            required
+            {...field}
+          />
+        )}
+      />
+    );
+  })();
 
   const mainComponent = (() => {
     switch (formField.type) {
@@ -231,7 +302,7 @@ function FormFieldRenderer({
     }
   })();
 
-  const metaComponent = (() => {
+  const feedbackComponent = (() => {
     if (formField.type !== FormFieldType.TextArea || !formField.hasFeedback) {
       return null;
     }
@@ -245,15 +316,33 @@ function FormFieldRenderer({
     );
   })();
 
+  const playtestComponent = (() => {
+
+    if (formField.type !== FormFieldType.TextArea || !formField.hasPlaytestFeedback) {
+      return null;
+    }
+
+    return (
+      <FormFieldPlaytestFeedbackRenderer
+        name={name}
+        question={formField.label}
+        collectData={formField.collectData}
+      />
+    );
+  })();
+
   return mainComponent ? (
     <Stack spacing={8}>
+      {genreDropdownComponent}
+      {mechanicDropdownComponent}
       {mainComponent}
       {withComments && (
         <Group position="right">
           <FormFieldCommentButton fieldIndex={index} />
         </Group>
       )}
-      {metaComponent}
+      {feedbackComponent}
+      {playtestComponent}
     </Stack>
   ) : null;
 }

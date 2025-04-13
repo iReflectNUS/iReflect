@@ -1,4 +1,3 @@
-version: "3.8"
 
 services:
   ## entry point for ireflect app containers
@@ -48,6 +47,14 @@ services:
     depends_on:
       - db
 
+  lightrag:
+    image: newtonkoh/lightrag:latest
+    ports:
+      - "9621:9621"
+    networks:
+      - backend  # or whichever network it should be connected to
+    restart: always
+
   ## can only be accessed within backend network
   db:
     image: postgres:13-alpine
@@ -58,6 +65,7 @@ services:
     env_file:
       - ./backend/.env.db.development.local
     restart: always
+
 
 networks:
   frontend:
