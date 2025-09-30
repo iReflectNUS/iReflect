@@ -58,6 +58,8 @@ services:
     networks:
       - backend  # or whichever network it should be connected to
     restart: always
+    # env_file:
+    #   - .lightrag.env
 
   ## can only be accessed within backend network
   db:
