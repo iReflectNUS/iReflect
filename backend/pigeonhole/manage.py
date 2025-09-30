@@ -8,6 +8,7 @@ from dotenv import load_dotenv
 
 load_dotenv(os.getcwd() + "/.env.backend.dev")
 
+
 def main():
     """Run administrative tasks."""
     os.environ.setdefault("DJANGO_SETTINGS_MODULE", "pigeonhole.settings")
