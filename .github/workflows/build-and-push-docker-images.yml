@@ -75,3 +75,9 @@ jobs:
         docker push ${{ vars.DOCKERHUB_USERNAME }}/ireflect-reverse-proxy --all-tags
         docker push ${{ vars.DOCKERHUB_USERNAME }}/ireflect-frontend --all-tags
         docker push ${{ vars.DOCKERHUB_USERNAME }}/ireflect-backend --all-tags
+
+    - name: Update and restart with latest images
+      run: |
+        docker compose -f docker-compose.production.yml pull
+        docker compose -f docker-compose.production.yml up -d --remove-orphans
+    
