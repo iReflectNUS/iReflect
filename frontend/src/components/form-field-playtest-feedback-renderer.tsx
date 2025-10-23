@@ -110,20 +110,23 @@ function FormFieldPlaytestFeedbackRenderer({ name, question, collectData }: Prop
       setisFetching(false);
     }
 
-    //If form in test mode, responses not considered
+    // If form in test mode, responses not considered
     if (feedbackContext.testMode || !feedbackContext.submissionId) {
       return;
     }
 
     const feedbackPostData = {
       submission_id: feedbackContext.submissionId,
-      question,
+      question: question,
+      genre: genre,
+      mechanic: mechanic,
       initial_response: content,
     };
 
     try {
 
       await tryStoreInitialResponse(feedbackPostData).unwrap();
+      console.log("Saved initial response:", feedbackPostData);
 
     } catch (error) {
 

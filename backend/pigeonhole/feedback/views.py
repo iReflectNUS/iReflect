@@ -51,6 +51,8 @@ class FeedbackInitialResponseView(APIView):
                 requester=requester,
                 question=validated_data["question"],
                 initial_response=validated_data["initial_response"],
+                genre=validated_data["genre"],
+                mechanic=validated_data["machanic"],
             )
         except ValueError as e:
             raise BadRequest(detail=e)

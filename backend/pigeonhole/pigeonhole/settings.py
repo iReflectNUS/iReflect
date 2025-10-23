@@ -191,7 +191,7 @@ SIMPLE_JWT = {
 DATABASES = {
     "default": {
         "ENGINE": os.getenv("SQL_ENGINE", "django.db.backends.postgresql"),
-        "NAME": os.getenv("SQL_DATABASE", BASE_DIR / "db.postgresql"),
+        "NAME": os.getenv("SQL_DATABASE", "db.postgresql"),
         "USER": os.getenv("SQL_USER", "user"),
         "PASSWORD": os.getenv("SQL_PASSWORD", "password"),
         "HOST": os.getenv("SQL_HOST", "localhost"),
