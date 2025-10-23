@@ -339,8 +339,8 @@ def createFeedbackInitialResponseIfNotExists(
         defaults={
             "name": submission.template.__str__(), 
             "initial_response":initial_response,
-            "genre":initial_response,
-            "mechanic":initial_response,
+            "genre":genre,
+            "mechanic":mechanic,
         }
     )
 
