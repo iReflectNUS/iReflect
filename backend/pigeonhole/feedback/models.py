@@ -15,6 +15,8 @@ class FeedbackInitialResponse(TimestampedModel):
     name = models.CharField(max_length=255)
     question = models.CharField(max_length=1000)
     initial_response = models.TextField(blank=False)
+    genre = models.TextField(null=True, blank=True)
+    mechanic = models.TextField(null=True, blank=True)
 
     class Meta:
         unique_together = ('course', 'milestone', 'template', 'creator', 'question')

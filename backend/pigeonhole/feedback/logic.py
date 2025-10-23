@@ -15,7 +15,7 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.select import Select
 from selenium.webdriver.support.ui import WebDriverWait
 
-from pigeonhole.common.constants import COURSE, CREATOR, ID, INITIAL_RESPONSE, MILESTONE, NAME, QUESTION
+from pigeonhole.common.constants import COURSE, CREATOR, ID, INITIAL_RESPONSE, MILESTONE, NAME, QUESTION, GENRE, MECHANIC
 from pigeonhole.common.parsers import to_base_json
 from users.logic import user_to_json
 from users.models import User
@@ -307,6 +307,8 @@ def createFeedbackInitialResponseIfNotExists(
     requester: User,
     question: str,
     initial_response: str,
+    genre: str | None = None,
+    mechanic: str | None = None,
 ) -> tuple[FeedbackInitialResponse, bool]:
     
     try:
@@ -337,6 +339,8 @@ def createFeedbackInitialResponseIfNotExists(
         defaults={
             "name": submission.template.__str__(), 
             "initial_response":initial_response,
+            "genre":initial_response,
+            "mechanic":initial_response,
         }
     )
 
@@ -349,6 +353,8 @@ def feedback_initial_response_to_json(response: FeedbackInitialResponse) -> dict
         NAME: response.name,
         QUESTION: response.question,
         INITIAL_RESPONSE: response.initial_response,
+        GENRE: response.genre,
+        MECHANIC: response.mechanic,
         CREATOR: user_to_json(response.creator.user)
         if response.creator is not None
         else None,

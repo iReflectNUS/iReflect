@@ -23,3 +23,4 @@ if (isProduction) {
     logger(...(logData as unknown[]));
   };
 }
+

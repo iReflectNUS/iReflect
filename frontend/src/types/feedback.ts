@@ -5,6 +5,8 @@ import {
   FEEDBACK,
   INITIAL_RESPONSE,
   QUESTION,
+  GENRE,
+  MECHANIC,
   SUBMISSION_ID,
   PLAYTEST_MODE,
   PLAYTEST_RESPONSE,
@@ -29,6 +31,8 @@ export type FeedbackInitialResponseData = {
 export type FeedbackInitialResponsePostData = Partial<BaseData> & {
   [SUBMISSION_ID]: string | number;
   [QUESTION]: string;
+  [GENRE]?: string;
+  [MECHANIC]?: string;
   [INITIAL_RESPONSE]: string;
 };
 
