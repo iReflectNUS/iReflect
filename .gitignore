@@ -3,3 +3,14 @@
 .env.*.local
 /.idea
 /backend/.idea
+/.codebuddy
+
+# Local DB dumps & E2E test artifacts
+/backend/pigeonhole/db.postgresql
+/backend/pigeonhole/db_e2e.sqlite3
+/backend/pigeonhole/e2e_server.pid
+/backend/pigeonhole/tmp_*.py
+/backend/pigeonhole/tmp_*.json
+
+# npm lockfile (project uses yarn)
+/frontend/package-lock.json

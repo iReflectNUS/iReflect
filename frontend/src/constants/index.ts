@@ -95,3 +95,6 @@ export const PLAYTEST_MODE = "mode";
 export const PLAYTEST_RESPONSE = "response";
 export const GENRE = "genre";
 export const MECHANIC = "mechanic";
+export const FEEDBACK_CONTENT = "feedback_content";
+export const IDEMPOTENCY_KEY = "idempotency_key";
+export const RECORD_ID = "record_id";

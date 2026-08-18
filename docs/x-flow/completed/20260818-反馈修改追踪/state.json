@@ -1,0 +1,64 @@
+{
+  "version": "2.0",
+  "reqId": "20260818-反馈修改追踪",
+  "title": "AI反馈记录与修改版本追踪（科研数据持久化）",
+  "createdAt": "2026-08-18T10:00:00+08:00",
+  "updatedAt": "2026-08-18T15:30:00+08:00",
+  "currentPhase": "COMPLETED",
+  "archivedAt": "2026-08-18T15:30:00+08:00",
+  "verdict": "DELIVERED",
+  "phases": {
+    "INIT_SETUP":              { "status": "COMPLETED", "startedAt": "2026-08-18T10:00:00+08:00", "completedAt": "2026-08-18T10:00:00+08:00", "agent": "01-init-agent", "outputs": ["01_init_prd.md"] },
+    "INIT_ARCHIVE_SCAN":       { "status": "COMPLETED", "startedAt": "2026-08-18T10:01:00+08:00", "completedAt": "2026-08-18T10:05:00+08:00", "agent": "01-init-agent", "outputs": ["risks.json"], "note": "无历史归档；单根仓库 iReflect；分支已创建" },
+    "CLARIFY_ANALYZE":         { "status": "COMPLETED", "startedAt": "2026-08-18T10:06:00+08:00", "completedAt": "2026-08-18T10:10:00+08:00", "agent": "02-clarify-agent", "outputs": [], "note": "识别 3 个待澄清项：2 P0 + 1 P1" },
+    "CLARIFY_DIALOG":          { "status": "COMPLETED", "startedAt": "2026-08-18T10:10:00+08:00", "completedAt": "2026-08-18T10:15:00+08:00", "agent": "02-clarify-agent", "outputs": ["02_clarify_log.md"], "note": "1 轮对话，3 项全部解决：1-A 前端上报 / 2-C 生成时快照 / 3-A 回填 version1" },
+    "CLARIFY_REFINE":          { "status": "COMPLETED", "startedAt": "2026-08-18T10:16:00+08:00", "completedAt": "2026-08-18T10:20:00+08:00", "agent": "02-clarify-agent", "outputs": ["03_clarify_prd-refined.md"] },
+    "DESIGN_EXPLORE":          { "status": "COMPLETED", "startedAt": "2026-08-18T10:21:00+08:00", "completedAt": "2026-08-18T10:45:00+08:00", "agent": "03-design-agent", "outputs": [], "note": "代码探索完成：feedback app 全貌/前端组件/LightRAG链路/权限体系" },
+    "DESIGN_ARCHITECT":        { "status": "COMPLETED", "startedAt": "2026-08-18T10:46:00+08:00", "completedAt": "2026-08-18T10:55:00+08:00", "agent": "03-design-agent", "outputs": ["04_design_tech-design.md"], "note": "RISK-DA006 用户已确认采纳幂等键方案，全部风险闭环" },
+    "DESIGN_TASK_SPLIT":       { "status": "COMPLETED", "startedAt": "2026-08-18T10:56:00+08:00", "completedAt": "2026-08-18T11:00:00+08:00", "agent": "03-design-agent", "outputs": ["05_design_task-breakdown.md"], "note": "3 架构任务 + 6 后端业务 + 4 前端业务" },
+    "IMPL_ARCHITECT_BACKEND":  { "status": "COMPLETED", "startedAt": "2026-08-18T11:01:00+08:00", "completedAt": "2026-08-18T11:20:00+08:00", "agent": "04-implement-agent", "outputs": ["migration 0003"], "note": "A1/A2 模型 + A3 迁移 + A4 契约，Django check 通过" },
+    "IMPL_CODE":               { "status": "COMPLETED", "startedAt": "2026-08-18T11:21:00+08:00", "completedAt": "2026-08-18T12:10:00+08:00", "agent": "04-implement-agent", "outputs": [], "note": "B1-B6 后端 + F1-F4 前端全部完成，lint/tsc/check 通过" },
+    "IMPL_SELF_CHECK":         { "status": "COMPLETED", "startedAt": "2026-08-18T12:20:00+08:00", "completedAt": "2026-08-18T12:40:00+08:00", "agent": "04-implement-agent", "outputs": ["06_impl_log.md", "07_impl_changed-files.md"], "note": "自检通过：@changelog 覆盖说明、check/tsc/lint/迁移一致、注释已全英文化（CORR-001）" },
+    "TEST_PLAN":               { "status": "COMPLETED", "startedAt": "2026-08-18T13:00:00+08:00", "completedAt": "2026-08-18T13:20:00+08:00", "agent": "05-test-agent", "outputs": ["08_test_plan.md"], "note": "14 验收标准 → 12 TC + 4 E2E；记忆映射 INIT-003/004/009 + CORR-001；E2E 强制实际运行" },
+    "TEST_EXECUTE":            { "status": "COMPLETED", "startedAt": "2026-08-18T13:30:00+08:00", "completedAt": "2026-08-18T14:40:00+08:00", "agent": "06-implement-agent", "outputs": ["09_test_report.md"], "note": "隔离库+真实HTTP：11 用例 10 PASS/1 BLOCKED(OpenAI key 缺失)、DB 断言 5/5、backfill 幂等 PASS、OBS-001(课程级归属校验)待 Owner 决策" },
+    "TEST_VERDICT":            { "status": "COMPLETED", "startedAt": "2026-08-18T15:00:00+08:00", "completedAt": "2026-08-18T15:10:00+08:00", "agent": "05-test-agent", "outputs": ["10_test_acceptance-checklist.md"], "note": "14 AC → 13 PASS/1 BLOCKED(AC-205 外部key)；无 🔴🟡 缺陷；OBS-001 观察项待 Owner；记忆覆盖 5/5；结论 ACCEPT" },
+    "ARCHIVE_COMPLETE":        { "status": "COMPLETED", "startedAt": "2026-08-18T15:20:00+08:00", "completedAt": "2026-08-18T15:30:00+08:00", "agent": "05-test-agent", "outputs": ["12_archive_summary.md"], "note": "归档完成：产物→completed/、记忆+3(LT-011/012, EV-001)、EVOL×2 pending、飞轮指标 15/15 阶段" }
+  },
+  "evolution": { "corrections": ["CORR-001 注释英文"], "retries": [], "learnings": ["LT-011 幂等键防重", "LT-012 隔离E2E测试", "EV-001 归属校验粒度"] },
+  "searchBudget": {
+    "totalUsed": 0,
+    "totalLimit": 100,
+    "byPhase": {
+      "DESIGN_EXPLORE": { "used": 0, "limit": 50 },
+      "IMPL_ARCHITECT_BACKEND": { "used": 0, "limit": 10 },
+      "IMPL_CODE": { "used": 0, "limit": 20 },
+      "TEST_EXECUTE": { "used": 0, "limit": 20 }
+    }
+  },
+  "context": {
+    "gitBranch": "feature/chuckyang123/20260818/ai-feedback-version-tracking",
+    "gitUser": "chuckyang123",
+    "repoStructure": "monorepo-root",
+    "archiveScanResult": "无历史归档、无扩展、无通知配置",
+    "clarifyDecisions": {
+      "q1_playtest_record_path": "A-前端上报回Django，不改NGINX",
+      "q2_version_trigger": "C-点击Generate Feedback时快照当前答案",
+      "q3_history_backfill": "A-回填FeedbackInitialResponse为version1"
+    }
+  },
+  "extensionsUsed": {},
+  "fastTrack": {
+    "enabled": false,
+    "confirmedAt": null,
+    "exitedAt": null,
+    "exitReason": null
+  },
+  "metadata": {
+    "priority": "P0",
+    "keywords": ["AI反馈", "修改版本", "修改追踪", "数据持久化", "科研数据", "数据采集", "FeedbackInitialResponse"],
+    "relatedArchives": [],
+    "prdSource": "docs/prd/20260818-反馈修改追踪.md",
+    "prdRefined": "docs/x-flow/active/20260818-反馈修改追踪/03_clarify_prd-refined.md",
+    "iteratesFrom": null
+  }
+}

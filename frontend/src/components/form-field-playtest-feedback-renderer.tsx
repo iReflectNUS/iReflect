@@ -7,6 +7,7 @@ import Markdown, { Components } from "react-markdown";
 import { useState, useEffect } from "react";
 import { useResolveError } from "../utils/error-utils";
 import {
+  useCreateFeedbackRecordMutation,
   useCreateInitialResponseIfNotExistsMutation,
 } from "../redux/services/feedback-api";
 import { FeedbackContext } from "../contexts/feedback-data-collection-provider";
@@ -70,6 +71,8 @@ function FormFieldPlaytestFeedbackRenderer({ name, question, collectData }: Prop
       selectFromResult: ({ isLoading }) => ({ isLoading }),
     });
 
+  const [createFeedbackRecord] = useCreateFeedbackRecordMutation();
+
   const onGenerateFeedback = async () => {
     setInputError(null);
     const content = getValues(name) as string;
@@ -91,6 +94,7 @@ function FormFieldPlaytestFeedbackRenderer({ name, question, collectData }: Prop
       Answer: ${content}
     `;
 
+    let playtestResponse = "";
     try {
       setisFetching(true);
       const res = await fetch("/api/playtest/", {
@@ -103,7 +107,8 @@ function FormFieldPlaytestFeedbackRenderer({ name, question, collectData }: Prop
       });
 
       const raw = await res.json() as { response?: string };
-      setFeedback(raw.response ?? "No feedback returned.");
+      playtestResponse = raw.response ?? "No feedback returned.";
+      setFeedback(playtestResponse);
     } catch (err) {
       resolveError(err);
     } finally {
@@ -129,6 +134,22 @@ function FormFieldPlaytestFeedbackRenderer({ name, question, collectData }: Prop
 
     } catch (error) {
 
+      resolveError(error);
+    }
+
+    // Report the AI feedback record (idempotency key prevents duplicates, RISK-DA006)
+    try {
+      await createFeedbackRecord({
+        submission_id: feedbackContext.submissionId,
+        question: question,
+        genre: genre,
+        mechanic: mechanic,
+        initial_response: content,
+        feedback_content: playtestResponse,
+        idempotency_key: crypto.randomUUID(),
+      }).unwrap();
+      console.log("Saved feedback record.");
+    } catch (error) {
       resolveError(error);
     }
   };

@@ -68,7 +68,11 @@ function FormFieldFeedbackRenderer({ name, question, collectData }: Props) {
     }
 
     try {
-      await getFeedback({ content }).unwrap();
+      await getFeedback({
+        content,
+        submission_id: feedbackContext.submissionId,
+        question,
+      }).unwrap();
     } catch (error) {
       resolveError(error);
       return;
