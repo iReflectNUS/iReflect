@@ -5,18 +5,70 @@ import { TbMessageChatbot } from "react-icons/tb";
 import { useContext } from "react";
 import Markdown, { Components } from "react-markdown";
 import { useState, useEffect } from "react";
+/**
+ * @changelog
+ * | Version | Description                                            | Reference                                     |
+ * | v1.0.0 | 初始实现（纳入索引）                                    |                                               |
+ * | v1.1.0 | 学生端剥离分数：stripScoresFromMarkdown + showAiScore 联动 | REQ: 20260824-playtest评分展示控制 TECH: tech-design §4.4 |
+ * /@changelog
+ *
+ * @author chuckyang123
+ */
 import { useResolveError } from "../utils/error-utils";
 import {
   useCreateFeedbackRecordMutation,
   useCreateInitialResponseIfNotExistsMutation,
 } from "../redux/services/feedback-api";
 import { FeedbackContext } from "../contexts/feedback-data-collection-provider";
+import useGetCourseId from "../custom-hooks/use-get-course-id";
+import { useGetSingleCourseQuery } from "../redux/services/courses-api";
+import useGetCurrentUserAccountType from "../custom-hooks/use-get-current-user-account-type";
+import { AccountType } from "../types/users";
 
 type Props = {
   name: string;
   question: string;
   collectData: boolean | undefined;
 };
+
+/**
+ * Strip the numeric scoring block from LightRAG playtest feedback markdown.
+ *
+ * The LightRAG output follows `prompt_for_playtest_feedback.txt`:
+ *   **Score: [xx/100]** → **Breakdown of Key Ingredients:** (10 x [x/10])
+ *   → **Genre & Mechanic Evaluation (Knowledge Graph Score):** ([x/50])
+ *   → **Professor Feedback:** (text) → **Final Summary:** (text)
+ *
+ * PRD 20260824-playtest评分展示控制 hides all numeric scores from students, so
+ * everything before "**Professor Feedback:**" is dropped. If the anchor is
+ * missing (format drift, RISK-R1), fall back to line-based filtering.
+ */
+export function stripScoresFromMarkdown(markdown: string): string {
+  const professorAnchor = "**Professor Feedback:**";
+  const anchorIndex = markdown.indexOf(professorAnchor);
+  if (anchorIndex !== -1) {
+    return markdown.slice(anchorIndex).trim();
+  }
+
+  return markdown
+    .split("\n")
+    .filter((line) => {
+      const trimmed = line.trim();
+      // Total score line: **Score: [xx/100]**
+      if (/^\*\*Score:\s*\[\d+\/\d+\]\*\*$/.test(trimmed)) return false;
+      // Ingredient lines: - **Specificity:** [x/10] – ...
+      if (/^[-*]\s+\*\*[^*]+:\*\*\s+\[\d+\/\d+\]/.test(trimmed)) return false;
+      // Knowledge graph line: - **[x/50]** – ...
+      if (/^[-*]\s+\*\*\[\d+\/\d+\]\*\*/.test(trimmed)) return false;
+      // Section headers for the scoring block
+      if (/^\*\*(Breakdown of Key Ingredients|Genre & Mechanic Evaluation)/.test(trimmed)) {
+        return false;
+      }
+      return true;
+    })
+    .join("\n")
+    .trim();
+}
 
 const markdownComponents: Partial<Components> = {
   h1: ({ node, children }) => <Title order={1}>{children}</Title>,
@@ -45,6 +97,16 @@ function FormFieldPlaytestFeedbackRenderer({ name, question, collectData }: Prop
   const{ getValues} = useFormContext();
   const { resolveError } = useResolveError({ name: "form-field-playtest-feedback-renderer" });
   const feedbackContext = useContext(FeedbackContext);
+
+  // PRD 20260824-playtest评分展示控制: students only see scores when the course
+  // enables showAiScore; educators/admins always see the full feedback.
+  const courseId = useGetCourseId();
+  const accountType = useGetCurrentUserAccountType();
+  const { data: course } = useGetSingleCourseQuery(courseId ?? "", {
+    skip: !courseId,
+  });
+  const shouldHideScores =
+    accountType === AccountType.Standard && course?.showAiScore === false;
 
   const [isFetching, setisFetching] = useState(false);
   const [feedback, setFeedback] = useState<string | null>(null);
@@ -108,7 +170,9 @@ function FormFieldPlaytestFeedbackRenderer({ name, question, collectData }: Prop
 
       const raw = await res.json() as { response?: string };
       playtestResponse = raw.response ?? "No feedback returned.";
-      setFeedback(playtestResponse);
+      setFeedback(
+        shouldHideScores ? stripScoresFromMarkdown(playtestResponse) : playtestResponse,
+      );
     } catch (err) {
       resolveError(err);
     } finally {

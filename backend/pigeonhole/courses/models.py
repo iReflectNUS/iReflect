@@ -1,3 +1,12 @@
+"""
+@changelog
+| Version | Description                                            | Reference                                     |
+| v1.0.0 | 初始实现（纳入索引）                                    |                                               |
+| v1.1.0 | 新增 CourseSettings.show_ai_score：控制学生端 AI 评分展示 | REQ: 20260824-playtest评分展示控制 TECH: tech-design §3.1 |
+/@changelog
+
+@author chuckyang123
+"""
 from django.db import models
 from django.db.models.signals import post_delete
 
@@ -54,6 +63,13 @@ class CourseSettings(TimestampedModel):
     allow_students_to_modify_group_name = models.BooleanField()
     allow_students_to_add_or_remove_group_members = models.BooleanField()
     milestone_alias = models.CharField(max_length=255, blank=True)
+    show_ai_score = models.BooleanField(
+        default=False,
+        help_text=(
+            "If False (default), students only see AI text suggestions, "
+            "not numeric scores (score_json). Teachers always see scores."
+        ),
+    )
 
     class Meta:
         verbose_name_plural = "course settings"

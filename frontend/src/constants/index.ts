@@ -1,3 +1,12 @@
+/**
+ * @changelog
+ * | Version | Description                                            | Reference                                     |
+ * | v1.0.0 | 初始实现（纳入索引）                                    |                                               |
+ * | v1.1.0 | 新增 SHOW_AI_SCORE 常量                                | REQ: 20260824-playtest评分展示控制 TECH: tech-design §4.1 |
+ * /@changelog
+ *
+ * @author chuckyang123
+ */
 export const APP_NAME = "iReflect";
 export const EMAIL = "email";
 export const PASSWORD = "password";
@@ -33,6 +42,7 @@ export const ALLOW_STUDENTS_TO_MODIFY_GROUP_NAME =
 export const ALLOW_STUDENTS_TO_ADD_OR_REMOVE_GROUP_MEMBERS =
   "allowStudentsToAddOrRemoveGroupMembers";
 export const MILESTONE_ALIAS = "milestoneAlias";
+export const SHOW_AI_SCORE = "showAiScore";
 export const ROLE = "role";
 export const FAILED_TOKEN_REFRESH = "failedTokenRefresh";
 export const MEMBER_COUNT = "memberCount";

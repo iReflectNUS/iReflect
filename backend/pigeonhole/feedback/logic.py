@@ -4,6 +4,7 @@
 | v1.0.0  | Initial implementation: ChatGPT feedback generation and initial response collection |                                             |
 | v1.1.0  | Added create_feedback_version_and_record:       | REQ: 20260818-feedback-modification-tracking |
 |         | transactional answer version snapshot + AI feedback record + idempotent dedup | TECH: 04_design_tech-design.md §3.3          |
+| v1.2.0  | ai_feedback_record_to_json 增加 include_score 参数 | REQ: 20260824-playtest评分展示控制 TECH: tech-design §3.6 |
 /@changelog
 
 @author chuckyang123
@@ -465,14 +466,23 @@ def feedback_answer_version_to_json(version: FeedbackAnswerVersion) -> dict:
     return data
 
 
-def ai_feedback_record_to_json(record: AIFeedbackRecord) -> dict:
+def ai_feedback_record_to_json(
+    record: AIFeedbackRecord, include_score: bool = True
+) -> dict:
+    """Serialize an AI feedback record to JSON.
+
+    `include_score` (default True) controls whether `score_json` is exposed.
+    Set to False in student-facing endpoints so numeric scores stay hidden
+    when a course disables `show_ai_score` (PRD 20260824-playtest评分展示控制).
+    Teachers always keep the score (include_score=True).
+    """
     data = to_base_json(record)
 
     data |= {
         "version": feedback_answer_version_to_json(record.version),
         "feedback_type": record.feedback_type,
         "strategy": record.strategy,
-        "score_json": record.score_json,
+        "score_json": record.score_json if include_score else None,
         "feedback_content": record.feedback_content,
         "model_version": record.model_version,
         "token_usage_json": record.token_usage_json,

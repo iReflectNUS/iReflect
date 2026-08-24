@@ -4,6 +4,7 @@
 | v1.0.0  | Initial implementation: feedback generation and initial response collection views |                                             |
 | v1.1.0  | Reworked FeedbackView: persist submission_id/question | REQ: 20260818-feedback-modification-tracking |
 |         | Added FeedbackRecordView: Playtest reporting + querying | TECH: 04_design_tech-design.md §3.3          |
+| v1.2.0  | FeedbackRecordView.post 按课程 show_ai_score 裁剪 score_json | REQ: 20260824-playtest评分展示控制 TECH: tech-design §3.6 |
 /@changelog
 
 @author chuckyang123
@@ -147,8 +148,17 @@ class FeedbackRecordView(APIView):
         except ValueError as e:
             raise BadRequest(detail=e)
 
+        # PRD 20260824-playtest评分展示控制: student-facing response hides scores
+        # unless the course enables show_ai_score; educators always keep them.
+        include_score = True
+        if requester.account_type == AccountType.STANDARD:
+            course_settings = getattr(record.version.course, "coursesettings", None)
+            include_score = bool(
+                course_settings is not None and course_settings.show_ai_score
+            )
+
         data = {
-            "record": ai_feedback_record_to_json(record),
+            "record": ai_feedback_record_to_json(record, include_score=include_score),
             "version": feedback_answer_version_to_json(record.version),
         }
 

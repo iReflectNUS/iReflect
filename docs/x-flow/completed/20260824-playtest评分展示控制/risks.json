@@ -1,0 +1,58 @@
+{
+  "version": "1.0",
+  "risks": [
+    {
+      "id": "R1",
+      "category": "design",
+      "severity": "medium",
+      "description": "LightRAG 返回的 Markdown 文本格式不固定，正则剥离分数区块可能漏匹配或误伤文字建议部分",
+      "impact": "仅建议模式下学生端仍可能看到部分分数，或误隐藏文字建议",
+      "strategy": "mitigate",
+      "mitigation": "剥离逻辑按 prompt 约定的固定区块头（**Score: / **Breakdown of Key Ingredients:** / **Genre & Mechanic Evaluation）匹配；未命中时整段保留兜底；E2E 用固定 prompt 文本验证",
+      "needsUserDecision": false,
+      "discussionStatus": "closed",
+      "userDecision": null,
+      "discussionSummary": "Phase 07 设计阶段已评估，采用区块头匹配 + 兜底策略"
+    },
+    {
+      "id": "R2",
+      "category": "security",
+      "severity": "medium",
+      "description": "学生可直接调用 /api/playtest/（nginx 代理到外部 LightRAG）获取含分数的原始文本，绕过前端剥离",
+      "impact": "技术上有绕过可能，但 PRD 语义为「展示控制」而非「数据加密」",
+      "strategy": "transfer",
+      "mitigation": "记录为生产观察项：如需强加密需改造代理层（超出本次范围）。本次以前端剥离满足展示语义",
+      "needsUserDecision": true,
+      "discussionStatus": "closed",
+      "userDecision": "accept",
+      "discussionSummary": "2026-08-24 用户确认：『只要页面不显示即可』→ 接受 R2，不扩大范围改造 nginx 代理层；前端剥离作为主控制点满足展示语义，数据级保护记录为生产观察项"
+    },
+    {
+      "id": "R3",
+      "category": "scope",
+      "severity": "low",
+      "description": "反思路径（反思写作 feedback-renderer）是否也需按配置剥离分数",
+      "impact": "若教师期望反思写作也仅建议，需同样处理（本次范围外）",
+      "strategy": "monitor",
+      "mitigation": "已确认反思路径响应不含 score_json（FeedbackView.post 仅返回 annotated_content/feedback/record_id）；如需扩展记录为后续迭代",
+      "needsUserDecision": false,
+      "discussionStatus": "closed",
+      "userDecision": null,
+      "discussionSummary": "Phase 07 探索已确认反思路径不暴露结构化分数，本次仅处理 playtest"
+    },
+    {
+      "id": "R4",
+      "category": "implementation",
+      "severity": "low",
+      "description": "ai_feedback_record_to_json 增加 include_score 参数后，调用点遗漏导致裁剪未生效",
+      "impact": "学生上报响应中 score_json 未被裁剪",
+      "strategy": "mitigate",
+      "mitigation": "搜索 ai_feedback_record_to_json( 全部调用点逐一确认（预计 post + get 2 处）",
+      "needsUserDecision": false,
+      "discussionStatus": "closed",
+      "userDecision": null,
+      "discussionSummary": null
+    }
+  ],
+  "lastUpdated": "2026-08-24T11:40:00+08:00"
+}

@@ -1,3 +1,10 @@
+# @changelog
+# | Version | Description                                            | Reference                                     |
+# | v1.0.0 | 初始实现（纳入索引）                                    |                                               |
+# | v1.1.0 | 新增 SHOW_AI_SCORE 常量                                | REQ: 20260824-playtest评分展示控制 TECH: tech-design §3.1 |
+# /@changelog
+#
+# @author chuckyang123
 ACCESS = "access"
 REFRESH = "refresh"
 TOKENS = "tokens"
@@ -30,6 +37,7 @@ ALLOW_STUDENTS_TO_ADD_OR_REMOVE_GROUP_MEMBERS = (
     "allow_students_to_add_or_remove_group_members"
 )
 MILESTONE_ALIAS = "milestone_alias"
+SHOW_AI_SCORE = "show_ai_score"
 START_DATE_TIME = "start_date_time"
 END_DATE_TIME = "end_date_time"
 MILESTONE = "milestone"
