@@ -7,6 +7,7 @@
 | v1.2.0  | FeedbackRecordView.post 按课程 show_ai_score 裁剪 score_json | REQ: 20260824-playtest评分展示控制 TECH: tech-design §3.6 |
 | v1.3.0  | FeedbackRecordView.get 支持 submission_id 过滤 | REQ: 20260818-feedback-modification-tracking |
 |         | （按提交维度查看反馈版本历史）                | TECH: tech-design §3.3                      |
+| v1.4.0  | 无 OPENAI_API_KEY 且非 DEBUG 时返回 503，避免生产环境输出模拟反馈 | PRD: production fails loudly |
 /@changelog
 
 @author chuckyang123
@@ -21,6 +22,7 @@ from users.middlewares import check_account_access
 from users.models import AccountType, User
 
 from .logic import (
+    FeedbackNotConfiguredError,
     askChatGPT,
     askChatGPTOriginal,
     ai_feedback_record_to_json,
@@ -50,15 +52,22 @@ class FeedbackView(APIView):
         # No annotated content from ChatGPT, only feedback
         annotated_content = ''
 
-        if requester.id % 2 == 0:
-            strategy = AIFeedbackRecord.STRATEGY_BASIC
-            feedback, score_json, token_usage_json, latency_ms = askChatGPTOriginal(
-                validated_data["content"]
-            )
-        else:
-            strategy = AIFeedbackRecord.STRATEGY_ADVANCED
-            feedback, score_json, token_usage_json, latency_ms = askChatGPT(
-                validated_data["content"]
+        try:
+            if requester.id % 2 == 0:
+                strategy = AIFeedbackRecord.STRATEGY_BASIC
+                feedback, score_json, token_usage_json, latency_ms = askChatGPTOriginal(
+                    validated_data["content"]
+                )
+            else:
+                strategy = AIFeedbackRecord.STRATEGY_ADVANCED
+                feedback, score_json, token_usage_json, latency_ms = askChatGPT(
+                    validated_data["content"]
+                )
+        except FeedbackNotConfiguredError as e:
+            # Production must fail loudly instead of serving simulated scores.
+            return Response(
+                data={"detail": str(e)},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
             )
 
         # Persist transactionally: answer version snapshot + AI feedback record (only when submission_id is provided)

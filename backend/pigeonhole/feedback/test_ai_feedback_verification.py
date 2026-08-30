@@ -8,11 +8,13 @@ Run from backend/:
 
 NOTE: Temporary file for verification only. Safe to delete after verification.
 """
+import os
 import uuid
 from datetime import timedelta
+from unittest import mock
 
 from django.core.management import call_command
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from django.utils import timezone as tz
 from rest_framework.test import APIClient
 
@@ -294,3 +296,64 @@ class BackfillTests(AIFeedbackBase):
         )
         self.assertEqual(versions.count(), 1)
         self.assertEqual(versions.first().answer_content, "new feature answer")
+
+
+class ProductionFailLoudlyTests(AIFeedbackBase):
+    """AI providers unconfigured -> mock is DEBUG-only; production returns 503
+    instead of serving simulated (score-less) feedback that could mislead."""
+
+    FEEDBACK_URL = "/api/feedback/"
+
+    def _feedback_post(self):
+        client = jwt_client(self.educator)
+        return client.post(
+            self.FEEDBACK_URL,
+            {
+                "content": "my reflection",
+                "submission_id": self.submission.id,
+                "question": "gameplay_feedback",
+            },
+            format="json",
+        )
+
+    def test_feedback_503_without_key_in_production(self):
+        with mock.patch.dict(os.environ, {}, clear=False):
+            os.environ.pop("OPENAI_API_KEY", None)
+            with override_settings(DEBUG=False):
+                resp = self._feedback_post()
+        self.assertEqual(resp.status_code, 503)
+
+    def test_feedback_mock_in_debug_has_no_scores(self):
+        with mock.patch.dict(os.environ, {}, clear=False):
+            os.environ.pop("OPENAI_API_KEY", None)
+            with override_settings(DEBUG=True):
+                resp = self._feedback_post()
+        self.assertEqual(resp.status_code, 200)
+        self.assertIn("Professor Feedback", resp.data["feedback"])
+        self.assertNotIn("Score", resp.data["feedback"])
+
+    def test_playtest_503_without_lightrag_in_production(self):
+        client = jwt_client(self.educator)
+        with mock.patch.dict(os.environ, {}, clear=False):
+            os.environ.pop("LIGHTRAG_URL", None)
+            with override_settings(DEBUG=False):
+                resp = client.post(
+                    "/api/playtest/",
+                    {"query": "x", "mode": "hybrid"},
+                    format="json",
+                )
+        self.assertEqual(resp.status_code, 503)
+
+    def test_playtest_mock_in_debug_has_no_scores(self):
+        client = jwt_client(self.educator)
+        with mock.patch.dict(os.environ, {}, clear=False):
+            os.environ.pop("LIGHTRAG_URL", None)
+            with override_settings(DEBUG=True):
+                resp = client.post(
+                    "/api/playtest/",
+                    {"query": "x", "mode": "hybrid"},
+                    format="json",
+                )
+        self.assertEqual(resp.status_code, 200)
+        self.assertIn("Professor Feedback", resp.data["response"])
+        self.assertNotIn("Score", resp.data["response"])

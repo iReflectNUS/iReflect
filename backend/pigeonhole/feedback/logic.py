@@ -7,6 +7,7 @@
 | v1.2.0  | ai_feedback_record_to_json 增加 include_score 参数 | REQ: 20260824-playtest评分展示控制 TECH: tech-design §3.6 |
 | v1.3.0  | FeedbackAnswerVersion 关联 submission，JSON 输出 submission | REQ: 20260818-feedback-modification-tracking TECH: tech-design §3.3 |
 | v1.4.0  | askChatGPT/askChatGPTOriginal 无 OPENAI_API_KEY 时降级为模拟反馈，方便本地演示与测试 | DEV: local demo without paid AI key |
+| v1.5.0  | 正式环境（DEBUG=False）无 OPENAI_API_KEY 时抛 FeedbackNotConfiguredError，不再输出虚假分数 | PRD: production must fail loudly, mock is DEV-only |
 /@changelog
 
 @author chuckyang123
@@ -38,6 +39,14 @@ from users.models import User
 from .models import AIFeedbackRecord, FeedbackAnswerVersion, FeedbackInitialResponse
 
 logger = logging.getLogger("main")
+
+
+class FeedbackNotConfiguredError(RuntimeError):
+    """Raised when an AI provider (OpenAI / LightRAG) is required in a
+    non-debug environment but its credentials or endpoint are not configured.
+    The API layer converts this into a 503 so production fails loudly instead
+    of serving simulated (score-less) feedback that could mislead students."""
+
 
 ## TODO: this is only a temporary implemention. Should not rely on webscraping in the long run.
 def answer_reflection(driver, element_class, reflection):
@@ -185,8 +194,14 @@ def _mock_openai_feedback(text: str) -> str:
 # Uses a basic prompt
 def askChatGPTOriginal(text):
     if not os.getenv("OPENAI_API_KEY"):
-        logger.warning("OPENAI_API_KEY is not set; falling back to mock feedback.")
-        return _mock_openai_feedback(text), None, None, 0
+        if settings.DEBUG:
+            logger.warning(
+                "OPENAI_API_KEY is not set; falling back to mock feedback (DEBUG only)."
+            )
+            return _mock_openai_feedback(text), None, None, 0
+        raise FeedbackNotConfiguredError(
+            "OPENAI_API_KEY is not configured. AI feedback generation is unavailable in this environment."
+        )
     start_time = time.time()
     client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
     
@@ -235,8 +250,14 @@ def askChatGPTOriginal(text):
 # Uses advanced prompt engineering techniques
 def askChatGPT(text):
     if not os.getenv("OPENAI_API_KEY"):
-        logger.warning("OPENAI_API_KEY is not set; falling back to mock feedback.")
-        return _mock_openai_feedback(text), None, None, 0
+        if settings.DEBUG:
+            logger.warning(
+                "OPENAI_API_KEY is not set; falling back to mock feedback (DEBUG only)."
+            )
+            return _mock_openai_feedback(text), None, None, 0
+        raise FeedbackNotConfiguredError(
+            "OPENAI_API_KEY is not configured. AI feedback generation is unavailable in this environment."
+        )
     start_time = time.time()
     scores, score_usages = askChatGPTForScore(text)
     response, feedback_usage = askChatGPTForFeedback(text, scores)
