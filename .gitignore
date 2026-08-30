@@ -14,3 +14,6 @@
 
 # npm lockfile (project uses yarn)
 /frontend/package-lock.json
+
+# PRD draft documents (not versioned)
+/docs/prd/
