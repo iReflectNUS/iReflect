@@ -4,10 +4,10 @@
 | v1.0.0  | Initial implementation: ChatGPT feedback generation and initial response collection |                                             |
 | v1.1.0  | Added create_feedback_version_and_record:       | REQ: 20260818-feedback-modification-tracking |
 |         | transactional answer version snapshot + AI feedback record + idempotent dedup | TECH: 04_design_tech-design.md §3.3          |
-| v1.2.0  | ai_feedback_record_to_json 增加 include_score 参数 | REQ: 20260824-playtest评分展示控制 TECH: tech-design §3.6 |
-| v1.3.0  | FeedbackAnswerVersion 关联 submission，JSON 输出 submission | REQ: 20260818-feedback-modification-tracking TECH: tech-design §3.3 |
-| v1.4.0  | askChatGPT/askChatGPTOriginal 无 OPENAI_API_KEY 时降级为模拟反馈，方便本地演示与测试 | DEV: local demo without paid AI key |
-| v1.5.0  | 正式环境（DEBUG=False）无 OPENAI_API_KEY 时抛 FeedbackNotConfiguredError，不再输出虚假分数 | PRD: production must fail loudly, mock is DEV-only |
+| v1.2.0  | ai_feedback_record_to_json gains include_score parameter | REQ: 20260824-playtest-score-visibility TECH: tech-design §3.6 |
+| v1.3.0  | FeedbackAnswerVersion links to submission; JSON output includes submission | REQ: 20260818-feedback-modification-tracking TECH: tech-design §3.3 |
+| v1.4.0  | askChatGPT/askChatGPTOriginal fall back to mock feedback without OPENAI_API_KEY for local demo & testing | DEV: local demo without paid AI key |
+| v1.5.0  | Production (DEBUG=False) without OPENAI_API_KEY raises FeedbackNotConfiguredError instead of emitting fake scores | PRD: production must fail loudly, mock is DEV-only |
 /@changelog
 
 @author chuckyang123
@@ -180,7 +180,7 @@ def _mock_openai_feedback(text: str) -> str:
 
     Deliberately contains NO numeric scores: the mock is also what students
     see, and a score-carrying mock would bypass the show_ai_score hiding
-    (PRD 20260824-playtest评分展示控制). Real OpenAI output still carries
+    (PRD 20260824-playtest-score-visibility). Real OpenAI output still carries
     scores and is stripped student-side by stripScoresFromMarkdown."""
     preview = " ".join(text.split())[:200]
     return (
@@ -521,7 +521,7 @@ def ai_feedback_record_to_json(
 
     `include_score` (default True) controls whether `score_json` is exposed.
     Set to False in student-facing endpoints so numeric scores stay hidden
-    when a course disables `show_ai_score` (PRD 20260824-playtest评分展示控制).
+    when a course disables `show_ai_score` (PRD 20260824-playtest-score-visibility).
     Teachers always keep the score (include_score=True).
     """
     data = to_base_json(record)

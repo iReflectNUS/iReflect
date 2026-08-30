@@ -1,8 +1,8 @@
 """
 @changelog
 | Version | Description                                            | Reference                                     |
-| v1.0.0 | 初始实现（纳入索引）                                    |                                               |
-| v1.1.0 | 新增 CourseSettings.show_ai_score：控制学生端 AI 评分展示 | REQ: 20260824-playtest评分展示控制 TECH: tech-design §3.1 |
+| v1.0.0 | Initial implementation (indexed baseline)              |                                               |
+| v1.1.0 | Added CourseSettings.show_ai_score: controls student-facing AI score display | REQ: 20260824-playtest-score-visibility TECH: tech-design §3.1 |
 /@changelog
 
 @author chuckyang123

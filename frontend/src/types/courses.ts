@@ -1,8 +1,8 @@
 /**
  * @changelog
  * | Version | Description                                            | Reference                                     |
- * | v1.0.0 | 初始实现（纳入索引）                                    |                                               |
- * | v1.1.0 | CourseSettings 类型增加 showAiScore 字段                | REQ: 20260824-playtest评分展示控制 TECH: tech-design §4.2 |
+ * | v1.0.0 | Initial implementation (indexed baseline)              |                                               |
+ * | v1.1.0 | CourseSettings type adds showAiScore field            | REQ: 20260824-playtest-score-visibility TECH: tech-design §4.2 |
  * /@changelog
  *
  * @author chuckyang123

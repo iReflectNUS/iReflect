@@ -1,8 +1,8 @@
 """
 @changelog
 | Version | Description                                            | Reference                                     |
-| v1.0.0 | 初始实现（纳入索引）                                    |                                               |
-| v1.1.0 | create_course/update_course 增加 show_ai_score 透传 | REQ: 20260824-playtest评分展示控制 TECH: tech-design §3.4 |
+| v1.0.0 | Initial implementation (indexed baseline)              |                                               |
+| v1.1.0 | create_course/update_course now pass through show_ai_score | REQ: 20260824-playtest-score-visibility TECH: tech-design §3.4 |
 /@changelog
 
 @author chuckyang123

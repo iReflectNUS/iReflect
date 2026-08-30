@@ -28,7 +28,7 @@ LIGHTRAG_API_KEY = os.getenv("LIGHTRAG_API_KEY", "your-secure-api-key-here")
 def _mock_playtest_feedback(query: str) -> str:
     """Deterministic mock for local demo. Deliberately carries NO numeric
     scores so students never see a score leaking through the mock
-    (PRD 20260824-playtest评分展示控制); real LightRAG output is stripped
+    (PRD 20260824-playtest-score-visibility); real LightRAG output is stripped
     student-side by stripScoresFromMarkdown instead."""
     preview = " ".join(query.split())[:200]
     return (

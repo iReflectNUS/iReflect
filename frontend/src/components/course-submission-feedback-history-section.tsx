@@ -14,8 +14,8 @@ import { TbMessageChatbot, TbUserEdit } from "react-icons/tb";
 import { skipToken } from "@reduxjs/toolkit/query/react";
 /**
  * @changelog
- * | 版本   | 变更说明                                             | 关联 |
- * | v1.0.0 | 初始实现：提交反馈历史两列视图（左学生输入/右AI反馈） | REQ: 20260818-feedback-modification-tracking TECH: tech-design §3.3 |
+ * | Version | Description                                          | Reference |
+ * | v1.0.0 | Initial implementation: two-column feedback history view (student input / AI feedback) | REQ: 20260818-feedback-modification-tracking TECH: tech-design §3.3 |
  * /@changelog
  *
  * @author chuckyang123

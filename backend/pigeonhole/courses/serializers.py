@@ -1,8 +1,8 @@
 """
 @changelog
 | Version | Description                                            | Reference                                     |
-| v1.0.0 | 初始实现（纳入索引）                                    |                                               |
-| v1.1.0 | CourseSettingsSerializer 增加 show_ai_score（default=False） | REQ: 20260824-playtest评分展示控制 TECH: tech-design §3.3 |
+| v1.0.0 | Initial implementation (indexed baseline)              |                                               |
+| v1.1.0 | CourseSettingsSerializer adds show_ai_score (default=False) | REQ: 20260824-playtest-score-visibility TECH: tech-design §3.3 |
 /@changelog
 
 @author chuckyang123

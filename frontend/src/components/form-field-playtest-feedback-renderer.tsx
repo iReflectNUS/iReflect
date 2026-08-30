@@ -8,9 +8,9 @@ import { useState, useEffect } from "react";
 /**
  * @changelog
  * | Version | Description                                            | Reference                                     |
- * | v1.0.0 | 初始实现（纳入索引）                                    |                                               |
- * | v1.1.0 | 学生端剥离分数：stripScoresFromMarkdown + showAiScore 联动 | REQ: 20260824-playtest评分展示控制 TECH: tech-design §4.4 |
- * | v1.2.0 | playtest 请求走绝对 API URL；失败时中止后续空记录创建 | DEV: fix HTML-in-JSON & blank feedbackContent |
+ * | v1.0.0 | Initial implementation (indexed baseline)              |                                               |
+ * | v1.1.0 | Student-side score stripping: stripScoresFromMarkdown + showAiScore integration | REQ: 20260824-playtest-score-visibility TECH: tech-design §4.4 |
+ * | v1.2.0 | Playtest request uses absolute API URL; abort empty record creation on failure | DEV: fix HTML-in-JSON & blank feedbackContent |
  * /@changelog
  *
  * @author chuckyang123
@@ -40,7 +40,7 @@ type Props = {
  *   → **Genre & Mechanic Evaluation (Knowledge Graph Score):** ([x/50])
  *   → **Professor Feedback:** (text) → **Final Summary:** (text)
  *
- * PRD 20260824-playtest评分展示控制 hides all numeric scores from students, so
+ * PRD 20260824-playtest-score-visibility hides all numeric scores from students, so
  * everything before "**Professor Feedback:**" is dropped. If the anchor is
  * missing (format drift, RISK-R1), fall back to line-based filtering.
  */
@@ -99,7 +99,7 @@ function FormFieldPlaytestFeedbackRenderer({ name, question, collectData }: Prop
   const { resolveError } = useResolveError({ name: "form-field-playtest-feedback-renderer" });
   const feedbackContext = useContext(FeedbackContext);
 
-  // PRD 20260824-playtest评分展示控制: students only see scores when the course
+  // PRD 20260824-playtest-score-visibility: students only see scores when the course
   // enables showAiScore; educators/admins always see the full feedback.
   const courseId = useGetCourseId();
   const accountType = useGetCurrentUserAccountType();

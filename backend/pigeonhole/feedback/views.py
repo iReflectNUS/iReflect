@@ -4,10 +4,10 @@
 | v1.0.0  | Initial implementation: feedback generation and initial response collection views |                                             |
 | v1.1.0  | Reworked FeedbackView: persist submission_id/question | REQ: 20260818-feedback-modification-tracking |
 |         | Added FeedbackRecordView: Playtest reporting + querying | TECH: 04_design_tech-design.md §3.3          |
-| v1.2.0  | FeedbackRecordView.post 按课程 show_ai_score 裁剪 score_json | REQ: 20260824-playtest评分展示控制 TECH: tech-design §3.6 |
-| v1.3.0  | FeedbackRecordView.get 支持 submission_id 过滤 | REQ: 20260818-feedback-modification-tracking |
-|         | （按提交维度查看反馈版本历史）                | TECH: tech-design §3.3                      |
-| v1.4.0  | 无 OPENAI_API_KEY 且非 DEBUG 时返回 503，避免生产环境输出模拟反馈 | PRD: production fails loudly |
+| v1.2.0  | FeedbackRecordView.post strips score_json based on course show_ai_score | REQ: 20260824-playtest-score-visibility TECH: tech-design §3.6 |
+| v1.3.0  | FeedbackRecordView.get supports submission_id filter | REQ: 20260818-feedback-modification-tracking |
+|         | (feedback version history per submission)      | TECH: tech-design §3.3                      |
+| v1.4.0  | Returns 503 without OPENAI_API_KEY and not in DEBUG, avoiding mock feedback in production | PRD: production fails loudly |
 /@changelog
 
 @author chuckyang123
@@ -159,7 +159,7 @@ class FeedbackRecordView(APIView):
         except ValueError as e:
             raise BadRequest(detail=e)
 
-        # PRD 20260824-playtest评分展示控制: student-facing response hides scores
+        # PRD 20260824-playtest-score-visibility: student-facing response hides scores
         # unless the course enables show_ai_score; educators always keep them.
         include_score = True
         if requester.account_type == AccountType.STANDARD:
