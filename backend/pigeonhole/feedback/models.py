@@ -4,6 +4,8 @@
 | v1.0.0  | Initial implementation: FeedbackInitialResponse model for collecting feedback initial responses |                                             |
 | v1.1.0  | Added FeedbackAnswerVersion and AIFeedbackRecord: | REQ: 20260818-feedback-modification-tracking |
 |         | answer version snapshots + AI feedback record persistence | TECH: 04_design_tech-design.md §3.2          |
+| v1.2.0  | FeedbackAnswerVersion.submission FK for per-submission history filtering | REQ: 20260818-feedback-modification-tracking |
+|         |                                                     | TECH: 04_design_tech-design.md §3.2          |
 /@changelog
 
 @author chuckyang123
@@ -11,7 +13,14 @@
 from django.db import models
 
 from pigeonhole.common.models import TimestampedModel
-from courses.models import Course, CourseMilestone, CourseMilestoneTemplate, CourseGroup, CourseMembership
+from courses.models import (
+    Course,
+    CourseMilestone,
+    CourseMilestoneTemplate,
+    CourseGroup,
+    CourseMembership,
+    CourseSubmission,
+)
 from users.models import User
 
 # Model for initial responses to the feedback feature
@@ -41,6 +50,13 @@ class FeedbackAnswerVersion(TimestampedModel):
     milestone = models.ForeignKey(CourseMilestone, on_delete=models.SET_NULL, null=True)
     template = models.ForeignKey(
         CourseMilestoneTemplate, on_delete=models.SET_NULL, null=True
+    )
+    submission = models.ForeignKey(
+        CourseSubmission,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="feedback_answer_versions",
     )
     creator = models.ForeignKey(CourseMembership, on_delete=models.SET_NULL, null=True)
     name = models.CharField(max_length=255)

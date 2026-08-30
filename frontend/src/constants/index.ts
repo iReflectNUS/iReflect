@@ -108,3 +108,7 @@ export const MECHANIC = "mechanic";
 export const FEEDBACK_CONTENT = "feedback_content";
 export const IDEMPOTENCY_KEY = "idempotency_key";
 export const RECORD_ID = "record_id";
+export const ANSWER_CONTENT = "answerContent";
+export const VERSION_NUMBER = "versionNumber";
+export const FEEDBACK_RECORDS = "feedbackRecords";
+export const SUBMISSION = "submission";

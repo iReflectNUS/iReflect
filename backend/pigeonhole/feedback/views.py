@@ -5,6 +5,8 @@
 | v1.1.0  | Reworked FeedbackView: persist submission_id/question | REQ: 20260818-feedback-modification-tracking |
 |         | Added FeedbackRecordView: Playtest reporting + querying | TECH: 04_design_tech-design.md §3.3          |
 | v1.2.0  | FeedbackRecordView.post 按课程 show_ai_score 裁剪 score_json | REQ: 20260824-playtest评分展示控制 TECH: tech-design §3.6 |
+| v1.3.0  | FeedbackRecordView.get 支持 submission_id 过滤 | REQ: 20260818-feedback-modification-tracking |
+|         | （按提交维度查看反馈版本历史）                | TECH: tech-design §3.3                      |
 /@changelog
 
 @author chuckyang123
@@ -172,7 +174,7 @@ class FeedbackRecordView(APIView):
         params = serializer.validated_data
 
         versions = FeedbackAnswerVersion.objects.select_related(
-            "course", "milestone", "template", "creator__user"
+            "course", "milestone", "template", "submission", "creator__user"
         ).prefetch_related("feedback_records").order_by(
             "creator", "question", "version_number"
         )
@@ -183,6 +185,8 @@ class FeedbackRecordView(APIView):
             versions = versions.filter(creator__user_id=params["user_id"])
         if params.get("milestone_id"):
             versions = versions.filter(milestone_id=params["milestone_id"])
+        if params.get("submission_id"):
+            versions = versions.filter(submission_id=params["submission_id"])
         if params.get("question"):
             versions = versions.filter(question=params["question"])
 

@@ -5,6 +5,8 @@
 | v1.1.0  | Added create_feedback_version_and_record:       | REQ: 20260818-feedback-modification-tracking |
 |         | transactional answer version snapshot + AI feedback record + idempotent dedup | TECH: 04_design_tech-design.md §3.3          |
 | v1.2.0  | ai_feedback_record_to_json 增加 include_score 参数 | REQ: 20260824-playtest评分展示控制 TECH: tech-design §3.6 |
+| v1.3.0  | FeedbackAnswerVersion 关联 submission，JSON 输出 submission | REQ: 20260818-feedback-modification-tracking TECH: tech-design §3.3 |
+| v1.4.0  | askChatGPT/askChatGPTOriginal 无 OPENAI_API_KEY 时降级为模拟反馈，方便本地演示与测试 | DEV: local demo without paid AI key |
 /@changelog
 
 @author chuckyang123
@@ -163,9 +165,28 @@ def _feedback_to_score_json(response: "Feedback", averaged_scores: list) -> dict
     }
 
 
+def _mock_openai_feedback(text: str) -> str:
+    """Simulated feedback used when OPENAI_API_KEY is not configured, so the
+    full feedback + version-history flow can still be exercised locally.
+
+    Deliberately contains NO numeric scores: the mock is also what students
+    see, and a score-carrying mock would bypass the show_ai_score hiding
+    (PRD 20260824-playtest评分展示控制). Real OpenAI output still carries
+    scores and is stripped student-side by stripScoresFromMarkdown."""
+    preview = " ".join(text.split())[:200]
+    return (
+        "**Professor Feedback:** "
+        f"(Local mock mode – OPENAI_API_KEY not set) Simulated feedback for: "
+        f"\"{preview}\""
+    )
+
+
 # Returns response from ChatGPT in a single string, which might contain newlines.
 # Uses a basic prompt
 def askChatGPTOriginal(text):
+    if not os.getenv("OPENAI_API_KEY"):
+        logger.warning("OPENAI_API_KEY is not set; falling back to mock feedback.")
+        return _mock_openai_feedback(text), None, None, 0
     start_time = time.time()
     client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
     
@@ -213,6 +234,9 @@ def askChatGPTOriginal(text):
 # Returns response from ChatGPT in a single string, which might contain newlines.
 # Uses advanced prompt engineering techniques
 def askChatGPT(text):
+    if not os.getenv("OPENAI_API_KEY"):
+        logger.warning("OPENAI_API_KEY is not set; falling back to mock feedback.")
+        return _mock_openai_feedback(text), None, None, 0
     start_time = time.time()
     scores, score_usages = askChatGPTForScore(text)
     response, feedback_usage = askChatGPTForFeedback(text, scores)
@@ -461,6 +485,9 @@ def feedback_answer_version_to_json(version: FeedbackAnswerVersion) -> dict:
         COURSE: {ID: version.course.id, NAME: version.course.name}
         if version.course is not None
         else None,
+        "submission": {ID: version.submission.id, NAME: version.submission.name}
+        if version.submission is not None
+        else None,
     }
 
     return data
@@ -550,6 +577,7 @@ def create_feedback_version_and_record(
         course=submission.course,
         milestone=submission.milestone,
         template=submission.template,
+        submission=submission,
         creator=requester_membership,
         name=submission.template.__str__(),
         question=question,

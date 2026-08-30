@@ -10,6 +10,7 @@ import { useState, useEffect } from "react";
  * | Version | Description                                            | Reference                                     |
  * | v1.0.0 | 初始实现（纳入索引）                                    |                                               |
  * | v1.1.0 | 学生端剥离分数：stripScoresFromMarkdown + showAiScore 联动 | REQ: 20260824-playtest评分展示控制 TECH: tech-design §4.4 |
+ * | v1.2.0 | playtest 请求走绝对 API URL；失败时中止后续空记录创建 | DEV: fix HTML-in-JSON & blank feedbackContent |
  * /@changelog
  *
  * @author chuckyang123
@@ -119,7 +120,9 @@ function FormFieldPlaytestFeedbackRenderer({ name, question, collectData }: Prop
       try {
         const res = await fetch("/prompt_for_playtest_feedback.txt");
         const text = await res.text();
-        setPromptText(text);
+        // Guard against the dev-server rewrite returning index.html instead
+        // of the prompt file.
+        setPromptText(text.trimStart().startsWith("<!DOCTYPE") ? "" : text);
       } catch (error) {
         console.error("Failed to load prompt file:", error);
       }
@@ -159,7 +162,7 @@ function FormFieldPlaytestFeedbackRenderer({ name, question, collectData }: Prop
     let playtestResponse = "";
     try {
       setisFetching(true);
-      const res = await fetch("/api/playtest/", {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/playtest/`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -167,14 +170,18 @@ function FormFieldPlaytestFeedbackRenderer({ name, question, collectData }: Prop
         },
         body: JSON.stringify({ query: fullQuery, mode: "hybrid" }),
       });
+      if (!res.ok) {
+        throw new Error(`Playtest request failed: HTTP ${res.status}`);
+      }
 
-      const raw = await res.json() as { response?: string };
+      const raw = (await res.json()) as { response?: string };
       playtestResponse = raw.response ?? "No feedback returned.";
       setFeedback(
         shouldHideScores ? stripScoresFromMarkdown(playtestResponse) : playtestResponse,
       );
     } catch (err) {
       resolveError(err);
+      return; // abort: do not record an empty AI feedback entry (RISK-DA006)
     } finally {
       setisFetching(false);
     }

@@ -4,6 +4,8 @@
 | v1.0.0  | Initial implementation: feedback generation and initial response collection serializers |                                             |
 | v1.1.0  | Added PostFeedbackRecordSerializer (reporting) and | REQ: 20260818-feedback-modification-tracking |
 |         | FeedbackRecordQuerySerializer (query filters)     | TECH: 04_design_tech-design.md §3.3          |
+| v1.2.0  | FeedbackRecordQuerySerializer 增加 submission_id | REQ: 20260818-feedback-modification-tracking |
+|         | 过滤参数                                        | TECH: 04_design_tech-design.md §3.3          |
 /@changelog
 
 @author chuckyang123
@@ -44,4 +46,5 @@ class FeedbackRecordQuerySerializer(serializers.Serializer):
     course_id = IdField(required=False)
     user_id = IdField(required=False)
     milestone_id = IdField(required=False)
+    submission_id = IdField(required=False)
     question = serializers.CharField(required=False, allow_blank=True, allow_null=True)
