@@ -17,3 +17,8 @@
 
 # PRD draft documents (not versioned)
 /docs/prd/
+
+# Chinese-language working docs (kept locally, not versioned)
+/docs/technical/
+/docs/evolve-log/
+/docs/x-flow/
