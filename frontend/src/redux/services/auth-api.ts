@@ -35,7 +35,7 @@ const authApi = baseApi.injectEndpoints({
       }),
       extraOptions: { includeAuth: false },
     }),
-    passwordReset: build.query<PasswordResetDetails, CheckAccountPostData>({
+    passwordReset: build.mutation<PasswordResetDetails, CheckAccountPostData>({
       query: (data) => ({
         url: "/gateway/reset/",
         method: "POST",
