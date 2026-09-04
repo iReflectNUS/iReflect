@@ -20,9 +20,7 @@ import { skipToken } from "@reduxjs/toolkit/query/react";
  *
  * @author chuckyang123
  */
-import {
-  useGetFeedbackAnswerVersionsQuery,
-} from "../redux/services/feedback-api";
+import { useGetFeedbackAnswerVersionsQuery } from "../redux/services/feedback-api";
 import { FeedbackVersionHistoryData } from "../types/feedback";
 import { useResolveError } from "../utils/error-utils";
 import {
@@ -61,13 +59,18 @@ function CourseSubmissionFeedbackHistorySection({
   courseId,
   submissionId,
 }: Props) {
-  const { data: versions, isLoading, error } = useGetFeedbackAnswerVersionsQuery(
-    submissionId === undefined
-      ? skipToken
-      : { submission_id: submissionId },
+  const {
+    data: versions,
+    isLoading,
+    error,
+  } = useGetFeedbackAnswerVersionsQuery(
+    submissionId === undefined ? skipToken : { submission_id: submissionId },
     { refetchOnMountOrArgChange: true },
   );
-  useResolveError({ error, name: "course-submission-feedback-history-section" });
+  useResolveError({
+    error,
+    name: "course-submission-feedback-history-section",
+  });
 
   // Show the raw feedback to educators/admins; strip numeric scores for
   // students unless the course explicitly enables showAiScore (REQ 20260824).
@@ -109,13 +112,13 @@ function CourseSubmissionFeedbackHistorySection({
   }
 
   // Group versions by question, ordered by version number (timeline).
-  const groups: Record<string, FeedbackVersionHistoryData[]> = {};
-  for (const version of [...versions].sort(
-    (a, b) => (a[VERSION_NUMBER] ?? 0) - (b[VERSION_NUMBER] ?? 0),
-  )) {
-    const key = version.question;
-    (groups[key] = groups[key] ?? []).push(version);
-  }
+  const groups: Record<string, FeedbackVersionHistoryData[]> = [...versions]
+    .sort((a, b) => (a[VERSION_NUMBER] ?? 0) - (b[VERSION_NUMBER] ?? 0))
+    .reduce<Record<string, FeedbackVersionHistoryData[]>>((acc, version) => {
+      const key = version.question;
+      (acc[key] = acc[key] ?? []).push(version);
+      return acc;
+    }, {});
 
   return (
     <Paper withBorder shadow="sm" radius="md" p="md">

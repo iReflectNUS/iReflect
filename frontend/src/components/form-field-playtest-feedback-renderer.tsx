@@ -2,9 +2,8 @@ import { Button, Text, Stack, Paper, Blockquote, Title } from "@mantine/core";
 import { useFormContext } from "react-hook-form";
 import { IoGameControllerOutline } from "react-icons/io5";
 import { TbMessageChatbot } from "react-icons/tb";
-import { useContext } from "react";
+import { useContext, useState, useEffect } from "react";
 import Markdown, { Components } from "react-markdown";
-import { useState, useEffect } from "react";
 /**
  * @changelog
  * | Version | Description                                            | Reference                                     |
@@ -62,7 +61,11 @@ export function stripScoresFromMarkdown(markdown: string): string {
       // Knowledge graph line: - **[x/50]** – ...
       if (/^[-*]\s+\*\*\[\d+\/\d+\]\*\*/.test(trimmed)) return false;
       // Section headers for the scoring block
-      if (/^\*\*(Breakdown of Key Ingredients|Genre & Mechanic Evaluation)/.test(trimmed)) {
+      if (
+        /^\*\*(Breakdown of Key Ingredients|Genre & Mechanic Evaluation)/.test(
+          trimmed,
+        )
+      ) {
         return false;
       }
       return true;
@@ -93,10 +96,16 @@ const markdownComponents: Partial<Components> = {
   strong: ({ node, children }) => <Text weight={700}>{children}</Text>,
 };
 
-function FormFieldPlaytestFeedbackRenderer({ name, question, collectData }: Props) {
+function FormFieldPlaytestFeedbackRenderer({
+  name,
+  question,
+  collectData,
+}: Props) {
   // const { getValues } = useFormContext<{ [name: string]: string }>();
-  const{ getValues} = useFormContext();
-  const { resolveError } = useResolveError({ name: "form-field-playtest-feedback-renderer" });
+  const { getValues } = useFormContext();
+  const { resolveError } = useResolveError({
+    name: "form-field-playtest-feedback-renderer",
+  });
   const feedbackContext = useContext(FeedbackContext);
 
   // PRD 20260824-playtest-score-visibility: students only see scores when the course
@@ -114,7 +123,6 @@ function FormFieldPlaytestFeedbackRenderer({ name, question, collectData }: Prop
   const [promptText, setPromptText] = useState<string>("");
   const [inputError, setInputError] = useState<string | null>(null);
 
-
   useEffect(() => {
     const fetchPrompt = async () => {
       try {
@@ -130,7 +138,6 @@ function FormFieldPlaytestFeedbackRenderer({ name, question, collectData }: Prop
     fetchPrompt();
   }, []);
 
-
   const [tryStoreInitialResponse, { isLoading }] =
     useCreateInitialResponseIfNotExistsMutation({
       selectFromResult: ({ isLoading }) => ({ isLoading }),
@@ -145,11 +152,12 @@ function FormFieldPlaytestFeedbackRenderer({ name, question, collectData }: Prop
     const mechanic = getValues("Mechanic") as string;
     console.log("genre:", genre, "mechanic:", mechanic);
     if (!genre || !mechanic) {
-      setInputError("Please select both a genre and a mechanic before generating feedback.");
+      setInputError(
+        "Please select both a genre and a mechanic before generating feedback.",
+      );
       return;
     }
     if (!content || isFetching || isLoading) return;
-
 
     const fullQuery = `
       ${promptText}
@@ -162,14 +170,17 @@ function FormFieldPlaytestFeedbackRenderer({ name, question, collectData }: Prop
     let playtestResponse = "";
     try {
       setisFetching(true);
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/playtest/`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "X-API-Key": "your-secure-api-key-here",
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL ?? ""}/playtest/`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-API-Key": "your-secure-api-key-here",
+          },
+          body: JSON.stringify({ query: fullQuery, mode: "hybrid" }),
         },
-        body: JSON.stringify({ query: fullQuery, mode: "hybrid" }),
-      });
+      );
       if (!res.ok) {
         throw new Error(`Playtest request failed: HTTP ${res.status}`);
       }
@@ -177,7 +188,9 @@ function FormFieldPlaytestFeedbackRenderer({ name, question, collectData }: Prop
       const raw = (await res.json()) as { response?: string };
       playtestResponse = raw.response ?? "No feedback returned.";
       setFeedback(
-        shouldHideScores ? stripScoresFromMarkdown(playtestResponse) : playtestResponse,
+        shouldHideScores
+          ? stripScoresFromMarkdown(playtestResponse)
+          : playtestResponse,
       );
     } catch (err) {
       resolveError(err);
@@ -193,18 +206,16 @@ function FormFieldPlaytestFeedbackRenderer({ name, question, collectData }: Prop
 
     const feedbackPostData = {
       submission_id: feedbackContext.submissionId,
-      question: question,
-      genre: genre,
-      mechanic: mechanic,
+      question,
+      genre,
+      mechanic,
       initial_response: content,
     };
 
     try {
       await tryStoreInitialResponse(feedbackPostData).unwrap();
       console.log("Saved initial response:", feedbackPostData);
-
     } catch (error) {
-
       resolveError(error);
     }
 
@@ -212,9 +223,9 @@ function FormFieldPlaytestFeedbackRenderer({ name, question, collectData }: Prop
     try {
       await createFeedbackRecord({
         submission_id: feedbackContext.submissionId,
-        question: question,
-        genre: genre,
-        mechanic: mechanic,
+        question,
+        genre,
+        mechanic,
         initial_response: content,
         feedback_content: playtestResponse,
         idempotency_key: crypto.randomUUID(),
@@ -250,9 +261,7 @@ function FormFieldPlaytestFeedbackRenderer({ name, question, collectData }: Prop
               <br />
               <br />
             </Text>
-            <Markdown components={markdownComponents}>
-              {feedback}
-            </Markdown>
+            <Markdown components={markdownComponents}>{feedback}</Markdown>
           </Paper>
         </Blockquote>
       )}
@@ -260,7 +269,4 @@ function FormFieldPlaytestFeedbackRenderer({ name, question, collectData }: Prop
   );
 }
 
-
 export default FormFieldPlaytestFeedbackRenderer;
-
-
