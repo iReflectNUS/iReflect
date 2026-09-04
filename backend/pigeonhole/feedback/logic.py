@@ -8,12 +8,15 @@
 | v1.3.0  | FeedbackAnswerVersion links to submission; JSON output includes submission | REQ: 20260818-feedback-modification-tracking TECH: tech-design §3.3 |
 | v1.4.0  | askChatGPT/askChatGPTOriginal fall back to mock feedback without OPENAI_API_KEY for local demo & testing | DEV: local demo without paid AI key |
 | v1.5.0  | Production (DEBUG=False) without OPENAI_API_KEY raises FeedbackNotConfiguredError instead of emitting fake scores | PRD: production must fail loudly, mock is DEV-only |
+| v1.6.0  | Added strip_scores_from_feedback_text + resolve_show_ai_score so reflection feedback sent to students can be score-stripped server-side | REQ: 20260824-playtest-score-visibility TECH: tech-design §3.6 |
+| v1.6.1  | strip_scores_from_feedback_text now also strips the "Additional Stage. Readability and Accuracy: x / 2" heading (was leaking the score) | REQ: 20260824-playtest-score-visibility |
 /@changelog
 
 @author chuckyang123
 """
 import logging
 import os
+import re
 import time
 
 from courses.models import (Course, CourseMembership, CourseMilestone,
@@ -172,6 +175,65 @@ def _feedback_to_score_json(response: "Feedback", averaged_scores: list) -> dict
         "total_score": total_score,
         "averaged_stage_scores": averaged_scores,
     }
+
+
+def resolve_show_ai_score(submission_id: int) -> bool | None:
+    """Resolve the course's ``show_ai_score`` setting through one of its submissions.
+
+    Returns None when the submission (and thus its course) cannot be resolved;
+    callers keep scores visible in that case rather than guessing.
+    """
+    try:
+        submission = CourseSubmission.objects.select_related(
+            "course__coursesettings"
+        ).get(id=submission_id)
+    except CourseSubmission.DoesNotExist:
+        return None
+
+    course_settings = getattr(submission.course, "coursesettings", None)
+    if course_settings is None:
+        return None
+    return bool(course_settings.show_ai_score)
+
+
+def strip_scores_from_feedback_text(feedback: str) -> str:
+    """Remove numeric scoring markers from educator-grade reflection feedback.
+
+    The Advanced ChatGPT flow formats each stage as
+    ``**Stage N. <title>: x / 2**`` and closes with ``**Total Score: xx / 12**``.
+    Hiding scores (PRD 20260824-playtest-score-visibility) keeps the stage
+    headings and the qualitative "done well / improvement" comments but drops
+    the numbers, so students never see a score when the course disables
+    ``show_ai_score``.
+
+    The Basic flow returns free-form text; only reliably-formatted standalone
+    score lines are removed there. Applied server-side so students cannot get
+    the scores by calling the API directly.
+    """
+    if not feedback:
+        return feedback
+
+    stage_header = re.compile(
+        r"^(\*\*(?:Stage \d+|Additional Stage)[^*]*?):\s*\d+(?:\.\d+)?\s*/\s*\d+\s*\*\*$"
+    )
+    score_line = re.compile(
+        r"^\*\*(?:Total\s+Score|Score|Overall\s+Score)\b[^*]*?:\s*\d"
+    )
+
+    lines = []
+    for line in feedback.splitlines():
+        trimmed = line.strip()
+        match = stage_header.match(trimmed)
+        if match:
+            # Keep the stage heading text, drop its "x / 2" suffix
+            lines.append(match.group(1) + "**")
+            continue
+        if score_line.match(trimmed):
+            # Standalone total/score lines carry no qualitative content
+            continue
+        lines.append(line)
+
+    return "\n".join(lines).strip()
 
 
 def _mock_openai_feedback(text: str) -> str:

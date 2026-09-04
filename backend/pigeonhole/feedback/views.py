@@ -8,6 +8,7 @@
 | v1.3.0  | FeedbackRecordView.get supports submission_id filter | REQ: 20260818-feedback-modification-tracking |
 |         | (feedback version history per submission)      | TECH: tech-design §3.3                      |
 | v1.4.0  | Returns 503 without OPENAI_API_KEY and not in DEBUG, avoiding mock feedback in production | PRD: production fails loudly |
+| v1.5.0  | FeedbackView.post strips numeric scores for STANDARD students when the course disables show_ai_score (record keeps full text); initial-response tolerates absent genre/mechanic | REQ: 20260824-playtest-score-visibility TECH: tech-design §3.6 |
 /@changelog
 
 @author chuckyang123
@@ -30,6 +31,8 @@ from .logic import (
     create_feedback_version_and_record,
     feedback_answer_version_to_json,
     feedback_initial_response_to_json,
+    resolve_show_ai_score,
+    strip_scores_from_feedback_text,
 )
 from .models import AIFeedbackRecord, FeedbackAnswerVersion
 from .serializers import (
@@ -91,9 +94,21 @@ class FeedbackView(APIView):
         else:
             record_id = None
 
+        # PRD 20260824-playtest-score-visibility: when the course hides AI scores,
+        # STANDARD students receive the qualitative feedback with numeric scores
+        # stripped. The record above keeps the full text for educator review.
+        display_feedback = feedback
+        if (
+            requester.account_type == AccountType.STANDARD
+            and validated_data.get("submission_id")
+        ):
+            show_ai_score = resolve_show_ai_score(validated_data["submission_id"])
+            if show_ai_score is False:
+                display_feedback = strip_scores_from_feedback_text(feedback)
+
         data = {
             "annotated_content": annotated_content,
-            "feedback": feedback,
+            "feedback": display_feedback,
             "record_id": record_id,
         }
 
@@ -118,8 +133,8 @@ class FeedbackInitialResponseView(APIView):
                 requester=requester,
                 question=validated_data["question"],
                 initial_response=validated_data["initial_response"],
-                genre=validated_data["genre"],
-                mechanic=validated_data["mechanic"],
+                genre=validated_data.get("genre"),
+                mechanic=validated_data.get("mechanic"),
             )
         except ValueError as e:
             raise BadRequest(detail=e)
