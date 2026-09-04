@@ -2,13 +2,11 @@ import { Button, Text, Stack, Paper, Blockquote, Title } from "@mantine/core";
 import { useFormContext } from "react-hook-form";
 import { IoGameControllerOutline } from "react-icons/io5";
 import { TbMessageChatbot } from "react-icons/tb";
-import { useContext } from "react";
+import { useContext, useState, useEffect } from "react";
 import Markdown, { Components } from "react-markdown";
-import { useState, useEffect } from "react";
+
 import { useResolveError } from "../utils/error-utils";
-import {
-  useCreateInitialResponseIfNotExistsMutation,
-} from "../redux/services/feedback-api";
+import { useCreateInitialResponseIfNotExistsMutation } from "../redux/services/feedback-api";
 import { FeedbackContext } from "../contexts/feedback-data-collection-provider";
 
 type Props = {
@@ -39,17 +37,22 @@ const markdownComponents: Partial<Components> = {
   strong: ({ node, children }) => <Text weight={700}>{children}</Text>,
 };
 
-function FormFieldPlaytestFeedbackRenderer({ name, question, collectData }: Props) {
+function FormFieldPlaytestFeedbackRenderer({
+  name,
+  question,
+  collectData,
+}: Props) {
   // const { getValues } = useFormContext<{ [name: string]: string }>();
-  const{ getValues} = useFormContext();
-  const { resolveError } = useResolveError({ name: "form-field-playtest-feedback-renderer" });
+  const { getValues } = useFormContext();
+  const { resolveError } = useResolveError({
+    name: "form-field-playtest-feedback-renderer",
+  });
   const feedbackContext = useContext(FeedbackContext);
 
   const [isFetching, setisFetching] = useState(false);
   const [feedback, setFeedback] = useState<string | null>(null);
   const [promptText, setPromptText] = useState<string>("");
   const [inputError, setInputError] = useState<string | null>(null);
-
 
   useEffect(() => {
     const fetchPrompt = async () => {
@@ -64,7 +67,6 @@ function FormFieldPlaytestFeedbackRenderer({ name, question, collectData }: Prop
     fetchPrompt();
   }, []);
 
-
   const [tryStoreInitialResponse, { isLoading }] =
     useCreateInitialResponseIfNotExistsMutation({
       selectFromResult: ({ isLoading }) => ({ isLoading }),
@@ -77,11 +79,12 @@ function FormFieldPlaytestFeedbackRenderer({ name, question, collectData }: Prop
     const mechanic = getValues("Mechanic") as string;
     console.log("genre:", genre, "mechanic:", mechanic);
     if (!genre || !mechanic) {
-      setInputError("Please select both a genre and a mechanic before generating feedback.");
+      setInputError(
+        "Please select both a genre and a mechanic before generating feedback.",
+      );
       return;
     }
     if (!content || isFetching || isLoading) return;
-
 
     const fullQuery = `
       ${promptText}
@@ -102,7 +105,7 @@ function FormFieldPlaytestFeedbackRenderer({ name, question, collectData }: Prop
         body: JSON.stringify({ query: fullQuery, mode: "hybrid" }),
       });
 
-      const raw = await res.json() as { response?: string };
+      const raw = (await res.json()) as { response?: string };
       setFeedback(raw.response ?? "No feedback returned.");
     } catch (err) {
       resolveError(err);
@@ -117,18 +120,16 @@ function FormFieldPlaytestFeedbackRenderer({ name, question, collectData }: Prop
 
     const feedbackPostData = {
       submission_id: feedbackContext.submissionId,
-      question: question,
-      genre: genre,
-      mechanic: mechanic,
+      question,
+      genre,
+      mechanic,
       initial_response: content,
     };
 
     try {
       await tryStoreInitialResponse(feedbackPostData).unwrap();
       console.log("Saved initial response:", feedbackPostData);
-
     } catch (error) {
-
       resolveError(error);
     }
   };
@@ -158,9 +159,7 @@ function FormFieldPlaytestFeedbackRenderer({ name, question, collectData }: Prop
               <br />
               <br />
             </Text>
-            <Markdown components={markdownComponents}>
-              {feedback}
-            </Markdown>
+            <Markdown components={markdownComponents}>{feedback}</Markdown>
           </Paper>
         </Blockquote>
       )}
@@ -168,7 +167,4 @@ function FormFieldPlaytestFeedbackRenderer({ name, question, collectData }: Prop
   );
 }
 
-
 export default FormFieldPlaytestFeedbackRenderer;
-
-

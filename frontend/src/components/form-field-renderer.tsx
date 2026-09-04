@@ -1,4 +1,5 @@
 import { createStyles, Group, ScrollArea, Stack, Select } from "@mantine/core";
+import { Controller, useFormContext } from "react-hook-form";
 import { FormField, FormFieldType } from "../types/templates";
 import CheckboxGroupField from "./checkbox-group-field";
 import FormFieldCommentButton from "./form-field-comment-button";
@@ -9,7 +10,6 @@ import RadioGroupField from "./radio-group-field";
 import TextField from "./text-field";
 import TextViewer from "./text-viewer";
 import TextareaField from "./textarea-field";
-import { Controller, useFormContext } from "react-hook-form";
 
 const useStyles = createStyles({
   // NOTE: currently there is no way to access the container for checkbox and radio options
@@ -35,7 +35,10 @@ const genreOptions = [
 const mechanicOptions = [
   { value: "Mobility & Movement", label: "Mobility & Movement" },
   { value: "Combat & Attack", label: "Combat & Attack" },
-  { value: "Resource Management & Economy", label: "Resource Management & Economy" },
+  {
+    value: "Resource Management & Economy",
+    label: "Resource Management & Economy",
+  },
   { value: "Puzzle & Interaction", label: "Puzzle & Interaction" },
   { value: "AI & Character Interaction", label: "AI & Character Interaction" },
   { value: "Progression & Upgrade", label: "Progression & Upgrade" },
@@ -62,7 +65,10 @@ function FormFieldRenderer({
 
   const { control } = useFormContext();
   const genreDropdownComponent = (() => {
-    if (formField.type !== FormFieldType.TextArea || !formField.hasPlaytestFeedback) {
+    if (
+      formField.type !== FormFieldType.TextArea ||
+      !formField.hasPlaytestFeedback
+    ) {
       return null;
     }
 
@@ -85,7 +91,10 @@ function FormFieldRenderer({
   })();
 
   const mechanicDropdownComponent = (() => {
-    if (formField.type !== FormFieldType.TextArea || !formField.hasPlaytestFeedback) {
+    if (
+      formField.type !== FormFieldType.TextArea ||
+      !formField.hasPlaytestFeedback
+    ) {
       return null;
     }
 
@@ -317,8 +326,10 @@ function FormFieldRenderer({
   })();
 
   const playtestComponent = (() => {
-
-    if (formField.type !== FormFieldType.TextArea || !formField.hasPlaytestFeedback) {
+    if (
+      formField.type !== FormFieldType.TextArea ||
+      !formField.hasPlaytestFeedback
+    ) {
       return null;
     }
 
