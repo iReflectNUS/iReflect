@@ -107,6 +107,38 @@ function FormFieldRenderer({
     );
   })();
 
+  // PRD 20260901: when any AI feedback is enabled (regular or playtest), ask
+  // the student why they stopped at this stage instead of finalizing it.
+  const finalizationReasonComponent = (() => {
+    if (
+      formField.type !== FormFieldType.TextArea ||
+      (!formField.hasFeedback && !formField.hasPlaytestFeedback)
+    ) {
+      return null;
+    }
+
+    return (
+      <TextareaField
+        name="FinalizationReason"
+        label={
+          <TextViewer
+            span
+            preserveWhiteSpace
+            overflowWrap
+            withLinkify
+            inherit
+          >
+            Why did you stop at this stage and finalize it?
+          </TextViewer>
+        }
+        minRows={2}
+        maxRows={5}
+        required
+        rules={{ required: "This field is required." }}
+      />
+    );
+  })();
+
   const mainComponent = (() => {
     switch (formField.type) {
       case FormFieldType.Text: {
@@ -343,6 +375,7 @@ function FormFieldRenderer({
       )}
       {feedbackComponent}
       {playtestComponent}
+      {finalizationReasonComponent}
     </Stack>
   ) : null;
 }
