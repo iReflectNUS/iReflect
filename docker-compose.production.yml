@@ -22,6 +22,8 @@ services:
   ## can only be accessed within frontend network
   frontend:
     image: szelongq/ireflect-frontend:production
+    security_opt:
+      - seccomp=unconfined
     build:
       context: ./frontend
       args:
