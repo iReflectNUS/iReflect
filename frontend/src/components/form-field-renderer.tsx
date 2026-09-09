@@ -117,7 +117,8 @@ function FormFieldRenderer({
   })();
 
   // PRD 20260901: when any AI feedback is enabled (regular or playtest), ask
-  // the student why they stopped at this stage instead of finalizing it.
+  // the student why they stopped generating further AI feedback and finalized
+  // their answer. The question is optional.
   const finalizationReasonComponent = (() => {
     if (
       formField.type !== FormFieldType.TextArea ||
@@ -137,13 +138,12 @@ function FormFieldRenderer({
             withLinkify
             inherit
           >
-            Why did you stop at this stage and finalize it?
+            In the previous interaction with AI feedback, why did you stop
+            generating further feedback and finalize it?
           </TextViewer>
         }
         minRows={2}
         maxRows={5}
-        required
-        rules={{ required: "This field is required." }}
       />
     );
   })();
