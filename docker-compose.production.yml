@@ -60,6 +60,11 @@ services:
     networks:
       - backend  # or whichever network it should be connected to
     restart: always
+    ## The image ships a baked-in /app/.env pointing at OpenAI with an exhausted
+    ## key (runbook archive B). Mount a host copy to override it; the file is
+    ## gitignored (.env.*.local) and holds LLM/EMBEDDING keys + LIGHTRAG_API_KEY.
+    volumes:
+      - ./.env.lightrag.production.local:/app/.env:ro
 
   ## can only be accessed within backend network
   db:
