@@ -37,15 +37,14 @@ jobs:
         envkey_PASSWORD_RESET_EMAIL_TEMPLATE_ID: ${{ vars.PASSWORD_RESET_EMAIL_TEMPLATE_ID }}
         envkey_PASSWORD_RESET_CONFIRMATION_EMAIL_TEMPLATE_ID: ${{ vars.PASSWORD_RESET_CONFIRMATION_EMAIL_TEMPLATE_ID }}
         envkey_OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-        some_other_variable: foobar
         file_name: .env.backend.production.local
 
     - name: Create db .env file
       uses: SpicyPizza/create-envfile@v2.0.3
       with:        
-        POSTGRES_USER: ${{ vars.POSTGRES_USER }}
-        POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
-        POSTGRES_DB: ${{ vars.POSTGRES_DB }}
+        envkey_POSTGRES_USER: ${{ vars.POSTGRES_USER }}
+        envkey_POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+        envkey_POSTGRES_DB: ${{ vars.POSTGRES_DB }}
         file_name: .env.db.production.local
 
     - name: Login to Docker Hub
@@ -76,8 +75,9 @@ jobs:
         docker push ${{ vars.DOCKERHUB_USERNAME }}/ireflect-frontend --all-tags
         docker push ${{ vars.DOCKERHUB_USERNAME }}/ireflect-backend --all-tags
 
-    - name: Update and restart with latest images
-      run: |
-        docker compose -f docker-compose.production.yml pull
-        docker compose -f docker-compose.production.yml up -d --remove-orphans
-    
+    # Deployment deliberately stops at the registry. The production host runs
+    # `docker compose -f docker-compose.production.yml pull && up -d` itself.
+    # Running `up -d` here used to fail on the lightrag bind mount, because
+    # .env.lightrag.production.local is gitignored and therefore absent on the
+    # runner: Docker created a directory at that path and then refused to bind
+    # it onto the /app/.env file.
