@@ -235,6 +235,57 @@ class ScoreVisibilityTests(AIFeedbackBase):
         resp = client.get(RECORDS_URL, {"course_id": self.course.id})
         self.assertEqual(resp.status_code, 403)
 
+    def test_standard_instructor_can_read_submission_timeline(self):
+        """v1.6.0: a user invited as INSTRUCTOR keeps account_type=STANDARD, and
+        must still be able to read the per-submission history (the frontend
+        gates on the course role, so the backend must agree)."""
+        invited = User.objects.create(
+            name="Invited Teacher", email="invited@test.com",
+            account_type=AccountType.STANDARD, is_activated=True,
+        )
+        CourseMembership.objects.create(
+            user=invited, course=self.course, role=Role.INSTRUCTOR
+        )
+        self.call_create(idempotency_key=str(uuid.uuid4()), answer_content="v1")
+
+        resp = jwt_client(invited).get(
+            RECORDS_URL, {"submission_id": self.submission.id}
+        )
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(len(resp.data), 1)
+        self.assertEqual(resp.data[0]["version_number"], 1)
+        self.assertEqual(len(resp.data[0]["feedback_records"]), 1)
+
+    def test_standard_student_cannot_read_submission_timeline(self):
+        """A STANDARD user without an instructor role anywhere still gets 403."""
+        self.call_create(idempotency_key=str(uuid.uuid4()))
+
+        resp = jwt_client(self.student).get(
+            RECORDS_URL, {"submission_id": self.submission.id}
+        )
+        self.assertEqual(resp.status_code, 403)
+
+    def test_standard_instructor_cannot_read_other_courses(self):
+        """Being an instructor elsewhere must not expose another course's data."""
+        other_course = Course.objects.create(
+            owner=self.educator, name="Other Course", description="",
+            is_published=True,
+        )
+        outsider = User.objects.create(
+            name="Other Teacher", email="other@test.com",
+            account_type=AccountType.STANDARD, is_activated=True,
+        )
+        CourseMembership.objects.create(
+            user=outsider, course=other_course, role=Role.INSTRUCTOR
+        )
+        self.call_create(idempotency_key=str(uuid.uuid4()))
+
+        resp = jwt_client(outsider).get(
+            RECORDS_URL, {"submission_id": self.submission.id}
+        )
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp.data, [])
+
 
 class CourseShowAiScoreTests(AIFeedbackBase):
     """Feature 2: course-level show_ai_score config."""
