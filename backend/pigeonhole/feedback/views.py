@@ -9,16 +9,18 @@
 |         | (feedback version history per submission)      | TECH: tech-design §3.3                      |
 | v1.4.0  | Returns 503 without OPENAI_API_KEY and not in DEBUG, avoiding mock feedback in production | PRD: production fails loudly |
 | v1.5.0  | FeedbackView.post strips numeric scores for STANDARD students when the course disables show_ai_score (record keeps full text); initial-response tolerates absent genre/mechanic | REQ: 20260824-playtest-score-visibility TECH: tech-design §3.6 |
+| v1.6.0  | FeedbackRecordView.get authorizes STANDARD users by their course role (INSTRUCTOR/CO_OWNER) instead of the global account_type, fixing 403 for invited instructors whose account_type is still STANDARD | BUG: feedback-history-empty |
 /@changelog
 
 @author chuckyang123
 """
 from rest_framework import status
+from rest_framework.exceptions import PermissionDenied
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from pigeonhole.common.exceptions import BadRequest
-from courses.models import Course
+from courses.models import CourseMembership, Role
 from users.middlewares import check_account_access
 from users.models import AccountType, User
 
@@ -190,7 +192,7 @@ class FeedbackRecordView(APIView):
 
         return Response(data=data, status=status.HTTP_200_OK)
 
-    @check_account_access(AccountType.EDUCATOR, AccountType.ADMIN)
+    @check_account_access(AccountType.STANDARD, AccountType.EDUCATOR, AccountType.ADMIN)
     def get(self, request, requester: User):
         serializer = FeedbackRecordQuerySerializer(data=request.query_params)
 
@@ -213,6 +215,26 @@ class FeedbackRecordView(APIView):
             versions = versions.filter(submission_id=params["submission_id"])
         if params.get("question"):
             versions = versions.filter(question=params["question"])
+
+        # v1.6.0: STANDARD accounts are authorized by their role *inside the
+        # course* (INSTRUCTOR/CO_OWNER), matching the frontend gate
+        # (`canAccessFullDetails` in use-get-course-permissions.ts). The global
+        # account_type is the wrong axis here: AccountType.EDUCATOR only means
+        # "may create new courses" (users/models.py), so an instructor invited
+        # into someone else's course keeps account_type=STANDARD and used to be
+        # rejected with 403 while the frontend happily rendered the history
+        # section. EDUCATOR/ADMIN keep unrestricted read access for research.
+        if requester.account_type == AccountType.STANDARD:
+            administered_course_ids = list(
+                CourseMembership.objects.filter(
+                    user=requester, role__in=[Role.INSTRUCTOR, Role.CO_OWNER]
+                ).values_list("course_id", flat=True)
+            )
+
+            if not administered_course_ids:
+                raise PermissionDenied()
+
+            versions = versions.filter(course_id__in=administered_course_ids)
 
         data = [
             {
