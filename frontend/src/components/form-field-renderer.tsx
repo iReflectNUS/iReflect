@@ -1,5 +1,6 @@
 import { createStyles, Group, ScrollArea, Stack, Select } from "@mantine/core";
 import { Controller, useFormContext } from "react-hook-form";
+import { FINALIZATION_REASON, FORM_RESPONSE_DATA } from "../constants";
 import { FormField, FormFieldType } from "../types/templates";
 import CheckboxGroupField from "./checkbox-group-field";
 import FormFieldCommentButton from "./form-field-comment-button";
@@ -129,21 +130,20 @@ function FormFieldRenderer({
 
     return (
       <TextareaField
-        name="FinalizationReason"
+        // Store the answer on the field it belongs to (formResponseData[index])
+        // so it is sent by the submission payload and persisted. Registering it
+        // as a top-level "FinalizationReason" key meant the save never carried
+        // it, and the reset after a successful save wiped it off the screen.
+        name={`${FORM_RESPONSE_DATA}.${index}.${FINALIZATION_REASON}`}
         label={
-          <TextViewer
-            span
-            preserveWhiteSpace
-            overflowWrap
-            withLinkify
-            inherit
-          >
+          <TextViewer span preserveWhiteSpace overflowWrap withLinkify inherit>
             In the previous interaction with AI feedback, why did you stop
             generating further feedback and finalize it?
           </TextViewer>
         }
         minRows={2}
         maxRows={5}
+        readOnly={readOnly}
       />
     );
   })();

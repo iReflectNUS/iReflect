@@ -81,6 +81,9 @@ export const MILESTONE_ID = "milestoneId";
 export const GROUP_ID = "groupId";
 export const GROUP_IDS = "groupIds";
 export const RESPONSE = "response";
+// PRD 20260901: optional "why did you stop generating further AI feedback"
+// answer, stored on the form response field it belongs to.
+export const FINALIZATION_REASON = "finalizationReason";
 export const CREATOR = "creator";
 export const EDITOR = "editor";
 export const GROUP = "group";
