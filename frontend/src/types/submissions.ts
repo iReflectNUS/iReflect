@@ -4,6 +4,7 @@ import {
   CREATOR,
   DESCRIPTION,
   EDITOR,
+  FINALIZATION_REASON,
   FORM_RESPONSE_DATA,
   GROUP,
   GROUP_ID,
@@ -49,6 +50,10 @@ export const textFormResponseFieldSchema = textFormFieldSchema.extend({
 
 export const textAreaFormResponseFieldSchema = textAreaFormFieldSchema.extend({
   [RESPONSE]: z.string().trim(),
+  // PRD 20260901: the optional finalization-reason follow-up is stored on the
+  // field it belongs to. It has to be declared here: zod drops unknown keys, so
+  // an undeclared answer would never survive validation and reach the server.
+  [FINALIZATION_REASON]: z.string().optional(),
 });
 // .refine(
 //   ({ required, response }) => !required || response !== "",
