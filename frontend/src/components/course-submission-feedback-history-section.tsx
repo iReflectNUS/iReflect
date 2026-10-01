@@ -34,7 +34,7 @@ import useGetCourseId from "../custom-hooks/use-get-course-id";
 import { useGetSingleCourseQuery } from "../redux/services/courses-api";
 import useGetCurrentUserAccountType from "../custom-hooks/use-get-current-user-account-type";
 import { AccountType } from "../types/users";
-import { stripScoresFromMarkdown } from "./form-field-playtest-feedback-renderer";
+import { stripScoresFromMarkdown } from "../utils/playtest-score-utils";
 
 type Props = {
   courseId: string | number | undefined;

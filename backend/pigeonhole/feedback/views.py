@@ -10,6 +10,7 @@
 | v1.4.0  | Returns 503 without OPENAI_API_KEY and not in DEBUG, avoiding mock feedback in production | PRD: production fails loudly |
 | v1.5.0  | FeedbackView.post strips numeric scores for STANDARD students when the course disables show_ai_score (record keeps full text); initial-response tolerates absent genre/mechanic | REQ: 20260824-playtest-score-visibility TECH: tech-design §3.6 |
 | v1.6.0  | FeedbackRecordView.get authorizes STANDARD users by their course role (INSTRUCTOR/CO_OWNER) instead of the global account_type, fixing 403 for invited instructors whose account_type is still STANDARD | BUG: feedback-history-empty |
+| v1.7.0  | FeedbackRecordView.post persists the frontend-parsed score_json for playtest records (previously always null) | BUG: playtest-missing-score-json |
 /@changelog
 
 @author chuckyang123
@@ -170,6 +171,7 @@ class FeedbackRecordView(APIView):
                 strategy=AIFeedbackRecord.STRATEGY_PLAYTEST,
                 feedback_content=validated_data["feedback_content"],
                 idempotency_key=validated_data.get("idempotency_key"),
+                score_json=validated_data.get("score_json"),
                 genre=validated_data.get("genre"),
                 mechanic=validated_data.get("mechanic"),
             )

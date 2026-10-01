@@ -114,6 +114,10 @@ FORMAT AND STYLING INSTRUCTIONS (MANDATORY)
 - Leave exactly one empty line between items and sections.
 - All explanations must directly reference student content.
 - Output must be fully compatible with Markdown-rendering frontends.
+- Replace EVERY [x/y] placeholder in the format specification with the actual
+  number you assign. Never echo a literal placeholder such as [xx/100],
+  [x/10] or [x/50]; if you cannot score an ingredient, write 0 and explain why.
+- Filled example of the total-score line: **Score: [79/100]**
 
 
 

@@ -3,6 +3,7 @@
  * | Version | Description                                            | Reference                                     |
  * | v1.0.0 | Initial implementation (indexed baseline)              |                                               |
  * | v1.1.0 | Added SHOW_AI_SCORE constant                          | REQ: 20260824-playtest-score-visibility TECH: tech-design §4.1 |
+ * | v1.2.0 | Added SCORE_JSON constant (playtest score payload)    | BUG: playtest-missing-score-json |
  * /@changelog
  *
  * @author chuckyang123
@@ -110,6 +111,7 @@ export const GENRE = "genre";
 export const MECHANIC = "mechanic";
 export const FEEDBACK_CONTENT = "feedback_content";
 export const IDEMPOTENCY_KEY = "idempotency_key";
+export const SCORE_JSON = "score_json";
 export const RECORD_ID = "record_id";
 export const ANSWER_CONTENT = "answerContent";
 export const VERSION_NUMBER = "versionNumber";

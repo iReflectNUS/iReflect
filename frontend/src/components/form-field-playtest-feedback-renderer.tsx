@@ -10,6 +10,7 @@ import Markdown, { Components } from "react-markdown";
  * | v1.0.0 | Initial implementation (indexed baseline)              |                                               |
  * | v1.1.0 | Student-side score stripping: stripScoresFromMarkdown + showAiScore integration | REQ: 20260824-playtest-score-visibility TECH: tech-design §4.4 |
  * | v1.2.0 | Playtest request uses absolute API URL; abort empty record creation on failure | DEV: fix HTML-in-JSON & blank feedbackContent |
+ * | v1.3.0 | Parse playtest scores into score_json; drop unfilled [XX/100] placeholders; hiding scores now keeps the qualitative comments | BUG: playtest-missing-score-json |
  * /@changelog
  *
  * @author chuckyang123
@@ -24,55 +25,17 @@ import useGetCourseId from "../custom-hooks/use-get-course-id";
 import { useGetSingleCourseQuery } from "../redux/services/courses-api";
 import useGetCurrentUserAccountType from "../custom-hooks/use-get-current-user-account-type";
 import { AccountType } from "../types/users";
+import {
+  parsePlaytestScores,
+  sanitizeScorePlaceholders,
+  stripScoresFromMarkdown,
+} from "../utils/playtest-score-utils";
 
 type Props = {
   name: string;
   question: string;
   collectData: boolean | undefined;
 };
-
-/**
- * Strip the numeric scoring block from LightRAG playtest feedback markdown.
- *
- * The LightRAG output follows `prompt_for_playtest_feedback.txt`:
- *   **Score: [xx/100]** → **Breakdown of Key Ingredients:** (10 x [x/10])
- *   → **Genre & Mechanic Evaluation (Knowledge Graph Score):** ([x/50])
- *   → **Professor Feedback:** (text) → **Final Summary:** (text)
- *
- * PRD 20260824-playtest-score-visibility hides all numeric scores from students, so
- * everything before "**Professor Feedback:**" is dropped. If the anchor is
- * missing (format drift, RISK-R1), fall back to line-based filtering.
- */
-export function stripScoresFromMarkdown(markdown: string): string {
-  const professorAnchor = "**Professor Feedback:**";
-  const anchorIndex = markdown.indexOf(professorAnchor);
-  if (anchorIndex !== -1) {
-    return markdown.slice(anchorIndex).trim();
-  }
-
-  return markdown
-    .split("\n")
-    .filter((line) => {
-      const trimmed = line.trim();
-      // Total score line: **Score: [xx/100]**
-      if (/^\*\*Score:\s*\[\d+\/\d+\]\*\*$/.test(trimmed)) return false;
-      // Ingredient lines: - **Specificity:** [x/10] – ...
-      if (/^[-*]\s+\*\*[^*]+:\*\*\s+\[\d+\/\d+\]/.test(trimmed)) return false;
-      // Knowledge graph line: - **[x/50]** – ...
-      if (/^[-*]\s+\*\*\[\d+\/\d+\]\*\*/.test(trimmed)) return false;
-      // Section headers for the scoring block
-      if (
-        /^\*\*(Breakdown of Key Ingredients|Genre & Mechanic Evaluation)/.test(
-          trimmed,
-        )
-      ) {
-        return false;
-      }
-      return true;
-    })
-    .join("\n")
-    .trim();
-}
 
 const markdownComponents: Partial<Components> = {
   h1: ({ node, children }) => <Title order={1}>{children}</Title>,
@@ -186,7 +149,10 @@ function FormFieldPlaytestFeedbackRenderer({
       }
 
       const raw = (await res.json()) as { response?: string };
-      playtestResponse = raw.response ?? "No feedback returned.";
+      // Drop unfilled placeholders ([XX/100]) before showing or storing it.
+      playtestResponse = sanitizeScorePlaceholders(
+        raw.response ?? "No feedback returned.",
+      );
       setFeedback(
         shouldHideScores
           ? stripScoresFromMarkdown(playtestResponse)
@@ -228,6 +194,7 @@ function FormFieldPlaytestFeedbackRenderer({
         mechanic,
         initial_response: content,
         feedback_content: playtestResponse,
+        score_json: parsePlaytestScores(playtestResponse),
         idempotency_key: crypto.randomUUID(),
       }).unwrap();
       console.log("Saved feedback record.");

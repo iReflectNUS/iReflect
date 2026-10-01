@@ -15,6 +15,7 @@ import {
   SUBMISSION,
   SUBMISSION_ID,
   VERSION_NUMBER,
+  SCORE_JSON,
   PLAYTEST_MODE,
   PLAYTEST_RESPONSE,
   PLAYTEST_QUERY,
@@ -54,6 +55,14 @@ export type FeedbackRecordPostData = {
   [GENRE]?: string;
   [MECHANIC]?: string;
   [IDEMPOTENCY_KEY]?: string;
+  [SCORE_JSON]?: PlaytestScoreJson | null;
+};
+
+/** Structured playtest scores parsed out of the LightRAG score block. */
+export type PlaytestScoreJson = {
+  total: number | null;
+  breakdown: Record<string, number>;
+  knowledge_graph: number | null;
 };
 
 export type FeedbackRecordResponseData = {
