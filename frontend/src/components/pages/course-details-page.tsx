@@ -18,6 +18,10 @@ import useGetCourseId from "../../custom-hooks/use-get-course-id";
 import TextViewer from "../text-viewer";
 import useGetCoursePermissions from "../../custom-hooks/use-get-course-permissions";
 import UserProfileDisplay from "../user-profile-display";
+import ResearchExportSection from "../research-export-section";
+import useGetCurrentUserAccountType from "../../custom-hooks/use-get-current-user-account-type";
+import useGetCurrentUserId from "../../custom-hooks/use-get-current-user-id";
+import { AccountType } from "../../types/users";
 
 const useStyles = createStyles((theme) => ({
   detailsSection: {
@@ -37,6 +41,8 @@ function CourseDetailsPage() {
     selectFromResult: ({ data: course }) => ({ course }),
   });
   const { classes } = useStyles();
+  const accountType = useGetCurrentUserAccountType();
+  const userId = useGetCurrentUserId();
   const { canAccessFullDetails, canModify, canDelete } =
     useGetCoursePermissions();
 
@@ -65,6 +71,12 @@ function CourseDetailsPage() {
         radius="md"
       >
         <Stack spacing={32}>
+          {courseId &&
+            (canAccessFullDetails ||
+              accountType === AccountType.Admin ||
+              course?.owner.id === userId) && (
+              <ResearchExportSection courseId={courseId} />
+            )}
           <Stack spacing="xs">
             <Title order={5}>Course owner</Title>
             {owner && (
