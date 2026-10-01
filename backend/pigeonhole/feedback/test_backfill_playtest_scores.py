@@ -47,6 +47,27 @@ class ParseScoresTests(TestCase):
         self.assertIsNone(parse_scores("plain text without scores"))
         self.assertIsNone(parse_scores(""))
 
+    def test_drifted_format_bare_score_lines(self):
+        # Model stopped emitting brackets: score on its own line, "x/10" bare.
+        drifted = (
+            "**Score: [79/100]**\n\n"
+            "**Breakdown of Key Ingredients:**\n\n"
+            "- **Specificity:** 4/10 – mentions movement.\n"
+            "- **Constructive Criticism:** 2/10 – no suggestions.\n\n"
+            "**Genre & Mechanic Evaluation (Knowledge Graph Score):**\n"
+            "31/50\n"
+            "– The response fails to deeply engage.\n\n"
+            "**Professor Feedback:**\n\n- Good start.\n"
+        )
+        self.assertEqual(
+            parse_scores(drifted),
+            {
+                "total": 79,
+                "breakdown": {"specificity": 4, "constructive_criticism": 2},
+                "knowledge_graph": 31,
+            },
+        )
+
 
 class BackfillCommandTests(AIFeedbackBase):
     setUp = AIFeedbackBase.setUp
