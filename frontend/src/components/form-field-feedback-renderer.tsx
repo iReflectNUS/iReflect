@@ -20,10 +20,7 @@ import {
 } from "../redux/services/feedback-api";
 import { useResolveError } from "../utils/error-utils";
 import { FeedbackContext } from "../contexts/feedback-data-collection-provider";
-import { useGetSingleCourseQuery } from "../redux/services/courses-api";
-import useGetCourseId from "../custom-hooks/use-get-course-id";
-import useGetCurrentUserAccountType from "../custom-hooks/use-get-current-user-account-type";
-import { AccountType } from "../types/users";
+import useShouldHideAiScores from "../custom-hooks/use-should-hide-ai-scores";
 
 /**
  * Drop the numeric score markers from educator-grade reflection feedback
@@ -84,15 +81,9 @@ function FormFieldFeedbackRenderer({ name, question, collectData }: Props) {
   const { getValues } = useFormContext<{ [name: string]: string }>();
   const feedbackContext = useContext(FeedbackContext);
 
-  // PRD 20260824-playtest-score-visibility: students only see scores when the course
-  // enables showAiScore; educators/admins always see the full feedback.
-  const courseId = useGetCourseId();
-  const accountType = useGetCurrentUserAccountType();
-  const { data: course } = useGetSingleCourseQuery(courseId ?? "", {
-    skip: !courseId,
-  });
-  const shouldHideScores =
-    accountType === AccountType.Standard && course?.showAiScore === false;
+  // PRD 20260824-playtest-score-visibility: students only see scores when the
+  // course enables showAiScore; teachers/admins always see the full feedback.
+  const shouldHideScores = useShouldHideAiScores();
 
   const [getFeedback, { isFetching, feedbackResult }] = useLazyGetFeedbackQuery(
     {

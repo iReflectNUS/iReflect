@@ -30,10 +30,7 @@ import {
   VERSION_NUMBER,
 } from "../constants";
 import { displayDateTime } from "../utils/transform-utils";
-import useGetCourseId from "../custom-hooks/use-get-course-id";
-import { useGetSingleCourseQuery } from "../redux/services/courses-api";
-import useGetCurrentUserAccountType from "../custom-hooks/use-get-current-user-account-type";
-import { AccountType } from "../types/users";
+import useShouldHideAiScores from "../custom-hooks/use-should-hide-ai-scores";
 import { stripScoresFromMarkdown } from "../utils/playtest-score-utils";
 
 type Props = {
@@ -72,15 +69,9 @@ function CourseSubmissionFeedbackHistorySection({
     name: "course-submission-feedback-history-section",
   });
 
-  // Show the raw feedback to educators/admins; strip numeric scores for
+  // Show the raw feedback to teachers/admins; strip numeric scores for
   // students unless the course explicitly enables showAiScore (REQ 20260824).
-  const currentCourseId = useGetCourseId();
-  const accountType = useGetCurrentUserAccountType();
-  const { data: course } = useGetSingleCourseQuery(currentCourseId ?? "", {
-    skip: !currentCourseId,
-  });
-  const shouldHideScores =
-    accountType === AccountType.Standard && course?.showAiScore === false;
+  const shouldHideScores = useShouldHideAiScores();
 
   if (isLoading || !versions) {
     return (

@@ -14,11 +14,17 @@ from django.core.management.base import BaseCommand
 from ...models import AIFeedbackRecord
 
 # Mirrors parsePlaytestScores() in frontend/src/utils/playtest-score-utils.ts
-# so historical records get the same shape as newly reported ones.
-TOTAL_PATTERN = re.compile(r"\*\*Score:\s*\[(\d+)\s*/\s*\d+\]\*\*")
-GRAPH_PATTERN = re.compile(r"\*\*\[(\d+)\s*/\s*\d+\]\*\*")
+# so historical records get the same shape as newly reported ones. The model
+# drifts between "**[31/50]**", "31/50" and "[31/50]", so brackets and bold
+# markers are always optional.
+DENOMINATORS = r"(?:100|50|12|10|2)"
+TOTAL_PATTERN = re.compile(
+    r"Score:\s*\*{0,2}\s*\[?(\d{1,3})\s*/\s*" + DENOMINATORS + r"\]?"
+)
+GRAPH_PATTERN = re.compile(r"\[?(\d{1,3})\s*/\s*50\]?")
 INGREDIENT_PATTERN = re.compile(
-    r"^[-*]\s+\*\*([^:*]+):\*\*\s*\[(\d+)\s*/\s*\d+\]", re.MULTILINE
+    r"^[-*]\s+\*\*([^:*]+):\*\*\s*\*{0,2}\s*\[?(\d{1,3})\s*/\s*" + DENOMINATORS + r"\]?",
+    re.MULTILINE,
 )
 
 

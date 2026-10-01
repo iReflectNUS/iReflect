@@ -11,6 +11,7 @@ import Markdown, { Components } from "react-markdown";
  * | v1.1.0 | Student-side score stripping: stripScoresFromMarkdown + showAiScore integration | REQ: 20260824-playtest-score-visibility TECH: tech-design §4.4 |
  * | v1.2.0 | Playtest request uses absolute API URL; abort empty record creation on failure | DEV: fix HTML-in-JSON & blank feedbackContent |
  * | v1.3.0 | Parse playtest scores into score_json; drop unfilled [XX/100] placeholders; hiding scores now keeps the qualitative comments | BUG: playtest-missing-score-json |
+ * | v1.4.0 | Score visibility now follows the course role (useShouldHideAiScores) so invited instructors see scores again | BUG: teacher-scores-hidden |
  * /@changelog
  *
  * @author chuckyang123
@@ -21,10 +22,7 @@ import {
   useCreateInitialResponseIfNotExistsMutation,
 } from "../redux/services/feedback-api";
 import { FeedbackContext } from "../contexts/feedback-data-collection-provider";
-import useGetCourseId from "../custom-hooks/use-get-course-id";
-import { useGetSingleCourseQuery } from "../redux/services/courses-api";
-import useGetCurrentUserAccountType from "../custom-hooks/use-get-current-user-account-type";
-import { AccountType } from "../types/users";
+import useShouldHideAiScores from "../custom-hooks/use-should-hide-ai-scores";
 import {
   parsePlaytestScores,
   sanitizeScorePlaceholders,
@@ -73,13 +71,7 @@ function FormFieldPlaytestFeedbackRenderer({
 
   // PRD 20260824-playtest-score-visibility: students only see scores when the course
   // enables showAiScore; educators/admins always see the full feedback.
-  const courseId = useGetCourseId();
-  const accountType = useGetCurrentUserAccountType();
-  const { data: course } = useGetSingleCourseQuery(courseId ?? "", {
-    skip: !courseId,
-  });
-  const shouldHideScores =
-    accountType === AccountType.Standard && course?.showAiScore === false;
+  const shouldHideScores = useShouldHideAiScores();
 
   const [isFetching, setisFetching] = useState(false);
   const [feedback, setFeedback] = useState<string | null>(null);

@@ -10,6 +10,7 @@
 | v1.5.0  | Production (DEBUG=False) without OPENAI_API_KEY raises FeedbackNotConfiguredError instead of emitting fake scores | PRD: production must fail loudly, mock is DEV-only |
 | v1.6.0  | Added strip_scores_from_feedback_text + resolve_show_ai_score so reflection feedback sent to students can be score-stripped server-side | REQ: 20260824-playtest-score-visibility TECH: tech-design §3.6 |
 | v1.6.1  | strip_scores_from_feedback_text now also strips the "Additional Stage. Readability and Accuracy: x / 2" heading (was leaking the score) | REQ: 20260824-playtest-score-visibility |
+| v1.7.0  | Added should_hide_scores_in_course / should_hide_scores_for: score visibility follows the COURSE role, not account_type (invited instructors keep account_type STANDARD and were treated as students) | BUG: teacher-scores-hidden |
 /@changelog
 
 @author chuckyang123
@@ -20,7 +21,7 @@ import re
 import time
 
 from courses.models import (Course, CourseMembership, CourseMilestone,
-                            CourseMilestoneTemplate, CourseSubmission)
+                            CourseMilestoneTemplate, CourseSubmission, Role)
 from django.db import transaction
 from django.db.models import Max
 from django.conf import settings
@@ -37,7 +38,7 @@ from selenium.webdriver.support.ui import WebDriverWait
 from pigeonhole.common.constants import COURSE, CREATOR, ID, INITIAL_RESPONSE, MILESTONE, NAME, QUESTION, GENRE, MECHANIC
 from pigeonhole.common.parsers import to_base_json
 from users.logic import user_to_json
-from users.models import User
+from users.models import AccountType, User
 
 from .models import AIFeedbackRecord, FeedbackAnswerVersion, FeedbackInitialResponse
 
@@ -194,6 +195,40 @@ def resolve_show_ai_score(submission_id: int) -> bool | None:
     if course_settings is None:
         return None
     return bool(course_settings.show_ai_score)
+
+
+def should_hide_scores_in_course(requester: User, course) -> bool:
+    """True only for students of a course that disabled show_ai_score.
+
+    The course role (not the global account type) decides who is a teacher:
+    invited instructors and co-owners usually keep account_type STANDARD, and
+    treating them as students hid every score from them
+    (BUG: teacher-scores-hidden, same class as the GET fix in views v1.6.0).
+    """
+    if requester.account_type in (AccountType.EDUCATOR, AccountType.ADMIN):
+        return False
+    if course is None:
+        return False
+    if course.coursemembership_set.filter(
+        user=requester, role__in=[Role.INSTRUCTOR, Role.CO_OWNER]
+    ).exists():
+        return False
+
+    course_settings = getattr(course, "coursesettings", None)
+    if course_settings is None:
+        return False
+    return not course_settings.show_ai_score
+
+
+def should_hide_scores_for(requester: User, submission_id) -> bool:
+    """Course-aware helper for views that only have a submission id."""
+    try:
+        submission = CourseSubmission.objects.select_related(
+            "course__coursesettings"
+        ).get(id=submission_id)
+    except CourseSubmission.DoesNotExist:
+        return False
+    return should_hide_scores_in_course(requester, submission.course)
 
 
 def strip_scores_from_feedback_text(feedback: str) -> str:

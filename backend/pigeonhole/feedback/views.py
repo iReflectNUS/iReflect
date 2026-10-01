@@ -11,6 +11,7 @@
 | v1.5.0  | FeedbackView.post strips numeric scores for STANDARD students when the course disables show_ai_score (record keeps full text); initial-response tolerates absent genre/mechanic | REQ: 20260824-playtest-score-visibility TECH: tech-design §3.6 |
 | v1.6.0  | FeedbackRecordView.get authorizes STANDARD users by their course role (INSTRUCTOR/CO_OWNER) instead of the global account_type, fixing 403 for invited instructors whose account_type is still STANDARD | BUG: feedback-history-empty |
 | v1.7.0  | FeedbackRecordView.post persists the frontend-parsed score_json for playtest records (previously always null) | BUG: playtest-missing-score-json |
+| v1.8.0  | Score visibility follows the course role instead of account_type, so invited instructors/co-owners (account_type STANDARD) see scores again | BUG: teacher-scores-hidden |
 /@changelog
 
 @author chuckyang123
@@ -35,6 +36,8 @@ from .logic import (
     feedback_answer_version_to_json,
     feedback_initial_response_to_json,
     resolve_show_ai_score,
+    should_hide_scores_for,
+    should_hide_scores_in_course,
     strip_scores_from_feedback_text,
 )
 from .models import AIFeedbackRecord, FeedbackAnswerVersion
@@ -101,13 +104,9 @@ class FeedbackView(APIView):
         # STANDARD students receive the qualitative feedback with numeric scores
         # stripped. The record above keeps the full text for educator review.
         display_feedback = feedback
-        if (
-            requester.account_type == AccountType.STANDARD
-            and validated_data.get("submission_id")
-        ):
-            show_ai_score = resolve_show_ai_score(validated_data["submission_id"])
-            if show_ai_score is False:
-                display_feedback = strip_scores_from_feedback_text(feedback)
+        submission_id = validated_data.get("submission_id")
+        if submission_id is not None and should_hide_scores_for(requester, submission_id):
+            display_feedback = strip_scores_from_feedback_text(feedback)
 
         data = {
             "annotated_content": annotated_content,
@@ -180,12 +179,9 @@ class FeedbackRecordView(APIView):
 
         # PRD 20260824-playtest-score-visibility: student-facing response hides scores
         # unless the course enables show_ai_score; educators always keep them.
-        include_score = True
-        if requester.account_type == AccountType.STANDARD:
-            course_settings = getattr(record.version.course, "coursesettings", None)
-            include_score = bool(
-                course_settings is not None and course_settings.show_ai_score
-            )
+        include_score = not should_hide_scores_in_course(
+            requester, record.version.course
+        )
 
         data = {
             "record": ai_feedback_record_to_json(record, include_score=include_score),
