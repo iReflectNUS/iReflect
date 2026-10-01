@@ -6,6 +6,8 @@
 |         | FeedbackRecordQuerySerializer (query filters)     | TECH: 04_design_tech-design.md §3.3          |
 | v1.2.0  | FeedbackRecordQuerySerializer adds submission_id | REQ: 20260818-feedback-modification-tracking |
 |         | filter parameter                                | TECH: 04_design_tech-design.md §3.3          |
+| v1.3.0  | PostFeedbackRecordSerializer accepts score_json | BUG: playtest-missing-score-json             |
+|         | so playtest records keep structured scores      | PRD: 20260824-playtest-score-visibility      |
 /@changelog
 
 @author chuckyang123
@@ -39,6 +41,9 @@ class PostFeedbackRecordSerializer(serializers.Serializer):
     genre = serializers.CharField(required=False, allow_blank=True, allow_null=True)
     mechanic = serializers.CharField(required=False, allow_null=True)
     idempotency_key = serializers.UUIDField(required=False, allow_null=True)
+    # Parsed by the frontend from the LightRAG score block; absent when the
+    # response carried no parsable scores (still stored as null, not rejected).
+    score_json = serializers.JSONField(required=False, allow_null=True)
 
 
 class FeedbackRecordQuerySerializer(serializers.Serializer):

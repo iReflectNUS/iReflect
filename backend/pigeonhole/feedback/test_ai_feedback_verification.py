@@ -169,21 +169,19 @@ class VersionTrackingTests(AIFeedbackBase):
 class ScoreVisibilityTests(AIFeedbackBase):
     """Feature 2: POST /api/feedback/records/ hides score_json for students when course disables show_ai_score."""
 
-    def post_record(self, user, idempotency_key):
-        client = jwt_client(user)
-        return client.post(
-            RECORDS_URL,
-            {
-                "submission_id": self.submission.id,
-                "question": "gameplay_feedback",
-                "initial_response": "my answer",
-                "feedback_content": "**Score: [80/100]** some text",
-                "genre": "Strategy",
-                "mechanic": "Resource management",
-                "idempotency_key": idempotency_key,
-            },
-            format="json",
-        )
+    def post_record(self, user, idempotency_key, score_json=None):
+        payload = {
+            "submission_id": self.submission.id,
+            "question": "gameplay_feedback",
+            "initial_response": "my answer",
+            "feedback_content": "**Score: [80/100]** some text",
+            "genre": "Strategy",
+            "mechanic": "Resource management",
+            "idempotency_key": idempotency_key,
+        }
+        if score_json is not None:
+            payload["score_json"] = score_json
+        return jwt_client(user).post(RECORDS_URL, payload, format="json")
 
     def test_student_hides_score_when_course_disables(self):
         # Pre-create a record WITH a score (e.g. from the logic layer),
@@ -214,6 +212,28 @@ class ScoreVisibilityTests(AIFeedbackBase):
         resp = self.post_record(self.educator, key)
         self.assertEqual(resp.status_code, 200)
         self.assertEqual(resp.data["record"]["score_json"], {"score": 80})
+
+    def test_playtest_record_persists_score_json(self):
+        # The frontend parses the LightRAG score block and reports it; the
+        # record must keep it (playtest records used to always be null).
+        score = {
+            "total": 80,
+            "breakdown": {"specificity": 4, "constructive_criticism": 2},
+            "knowledge_graph": 18,
+        }
+        resp = self.post_record(self.student, str(uuid.uuid4()), score_json=score)
+
+        self.assertEqual(resp.status_code, 200)
+        record = AIFeedbackRecord.objects.get(id=resp.data["record"]["id"])
+        self.assertEqual(record.score_json, score)
+        self.assertEqual(record.feedback_type, AIFeedbackRecord.FEEDBACK_TYPE_PLAYTEST)
+
+    def test_playtest_record_without_score_json_stays_null(self):
+        resp = self.post_record(self.student, str(uuid.uuid4()))
+
+        self.assertEqual(resp.status_code, 200)
+        record = AIFeedbackRecord.objects.get(id=resp.data["record"]["id"])
+        self.assertIsNone(record.score_json)
 
     def test_get_timeline_for_educator(self):
         self.call_create(idempotency_key=str(uuid.uuid4()), answer_content="v1")
