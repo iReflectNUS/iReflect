@@ -213,6 +213,40 @@ class ScoreVisibilityTests(AIFeedbackBase):
         self.assertEqual(resp.status_code, 200)
         self.assertEqual(resp.data["record"]["score_json"], {"score": 80})
 
+    def test_invited_instructor_sees_score_when_course_disables(self):
+        # Invited instructors keep account_type STANDARD, so visibility must
+        # follow the course role (BUG: teacher-scores-hidden).
+        instructor = User.objects.create(
+            name="Invited Instructor", email="invited_instructor@test.com",
+            account_type=AccountType.STANDARD, is_activated=True,
+        )
+        CourseMembership.objects.create(
+            course=self.course, user=instructor, role=Role.INSTRUCTOR
+        )
+
+        key = str(uuid.uuid4())
+        self.call_create(idempotency_key=key, score_json={"score": 80})
+
+        resp = self.post_record(instructor, key)
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp.data["record"]["score_json"], {"score": 80})
+
+    def test_course_owner_sees_score_when_course_disables(self):
+        co_owner = User.objects.create(
+            name="Co Owner", email="co_owner@test.com",
+            account_type=AccountType.STANDARD, is_activated=True,
+        )
+        CourseMembership.objects.create(
+            course=self.course, user=co_owner, role=Role.CO_OWNER
+        )
+
+        key = str(uuid.uuid4())
+        self.call_create(idempotency_key=key, score_json={"score": 80})
+
+        resp = self.post_record(co_owner, key)
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp.data["record"]["score_json"], {"score": 80})
+
     def test_playtest_record_persists_score_json(self):
         # The frontend parses the LightRAG score block and reports it; the
         # record must keep it (playtest records used to always be null).
