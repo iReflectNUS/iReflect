@@ -1,4 +1,15 @@
-import { forwardRef, useMemo } from "react";
+/**
+ * @changelog
+ * | Version | Change                                                        | Related                       |
+ * |---------|---------------------------------------------------------------|------------------------------|
+ * | v1.0.0  | Add dirty-state guard: onDirtyChange callback, beforeunload   | REQ: 20261005-表单发布防丢    |
+ * |         | interception, "Unsaved changes" indicator and publish-save    | TECH: 04_design_tech-design.md|
+ * |         | tooltip so unpublished FormTemplate edits are never lost.    |                              |
+ * /@changelog
+ *
+ * @author chuckyang123
+ */
+import { forwardRef, useEffect, useMemo } from "react";
 import {
   ButtonProps,
   Group,
@@ -100,12 +111,14 @@ type Props = {
   defaultValues?: MilestoneTemplateFormBuilderProps;
   onSubmit: (formData: MilestoneTemplateFormBuilderData) => Promise<unknown>;
   submitButtonProps?: ButtonProps;
+  onDirtyChange?: (isDirty: boolean) => void;
 };
 
 function MilestoneTemplateFormBuilder({
   defaultValues = DEFAULT_VALUES,
   onSubmit: handleOnSubmit,
   submitButtonProps,
+  onDirtyChange,
 }: Props) {
   const parsedDefaultValues = useMemo(() => {
     const { formFieldData, ...rest } = defaultValues;
@@ -137,8 +150,35 @@ function MilestoneTemplateFormBuilder({
 
   const {
     handleSubmit,
-    formState: { isSubmitting },
+    formState: { isSubmitting, isDirty },
   } = methods;
+
+  // Keep the parent informed about unsaved edits so publish/save guards can react.
+  useEffect(() => {
+    onDirtyChange?.(isDirty);
+  }, [isDirty, onDirtyChange]);
+
+  // Warn the user before leaving the page with unpublished edits so content
+  // is never silently discarded (mirrors SubmissionForm behaviour).
+  useEffect(() => {
+    if (!isDirty) return undefined;
+    const warnBeforeUnload = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+      event.returnValue = "";
+    };
+    window.addEventListener("beforeunload", warnBeforeUnload);
+    return () => window.removeEventListener("beforeunload", warnBeforeUnload);
+  }, [isDirty]);
+
+  // Derive a human-readable save status for the submit area (avoids nested ternary).
+  let saveStatusLabel = "No unsaved changes";
+  let saveStatusColor: "dimmed" | "orange" = "dimmed";
+  if (isSubmitting) {
+    saveStatusLabel = "Saving…";
+  } else if (isDirty) {
+    saveStatusLabel = "Unsaved changes";
+    saveStatusColor = "orange";
+  }
 
   const onSubmit = async (rawFormData: MilestoneTemplateFormBuilderProps) => {
     if (isSubmitting) {
@@ -188,6 +228,8 @@ function MilestoneTemplateFormBuilder({
                   label={
                     <Text size="xs">
                       Students can view and use this template for submission.
+                      Remember to save after toggling for the change to take
+                      effect.
                     </Text>
                   }
                   withArrow
@@ -223,6 +265,13 @@ function MilestoneTemplateFormBuilder({
             <FormFieldBuilderSection name={FORM_FIELD_DATA} />
 
             <Group position="right">
+              <Text
+                size="sm"
+                color={saveStatusColor}
+                role="status"
+              >
+                {saveStatusLabel}
+              </Text>
               <Button
                 {...submitButtonProps}
                 type="submit"
