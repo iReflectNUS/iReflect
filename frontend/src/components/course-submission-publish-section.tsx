@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React from "react";
 import { skipToken } from "@reduxjs/toolkit/query/react";
 import { Group, Paper, Text } from "@mantine/core";
 import PlaceholderWrapper from "./placeholder-wrapper";
@@ -9,11 +9,13 @@ import CourseSubmissionPublishPopover from "./course-submission-publish-popover"
 type CourseSubmissionPublishSectionProps = {
   courseId?: number | string;
   submissionId?: number | string;
+  disabled?: boolean;
 };
 
 const CourseSubmissionPublishSection = ({
   courseId,
   submissionId,
+  disabled,
 }: CourseSubmissionPublishSectionProps) => {
   const { viewableGroups, isLoadingViewableGroups, error } =
     useGetSubmissionViewableGroupsQuery(
@@ -58,7 +60,13 @@ const CourseSubmissionPublishSection = ({
         courseId={courseId}
         submissionId={submissionId}
         viewableGroups={viewableGroups ?? []}
+        disabled={disabled}
       />
+      {disabled && (
+        <Text size="sm" color="orange">
+          Save your changes before changing publishing status.
+        </Text>
+      )}
     </Group>
   );
 };
