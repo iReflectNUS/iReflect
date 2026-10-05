@@ -12,12 +12,14 @@ type CourseSubmissionPublishPopoverProps = {
   courseId?: number | string;
   submissionId?: number | string;
   viewableGroups?: GroupData[];
+  disabled?: boolean;
 };
 
 const CourseSubmissionPublishPopover = ({
   courseId,
   submissionId,
   viewableGroups,
+  disabled,
 }: CourseSubmissionPublishPopoverProps) => {
   const [opened, setOpened] = useState(false);
   const { groups, isLoadingGroups, error } = useGetCourseGroupsQuery(
@@ -65,6 +67,7 @@ const CourseSubmissionPublishPopover = ({
 
   const onUpdatePublishingStatus = async () => {
     if (
+      disabled ||
       isUpdatingPublishingStatus ||
       courseId === undefined ||
       submissionId === undefined ||
@@ -119,7 +122,11 @@ const CourseSubmissionPublishPopover = ({
       onChange={setOpened}
     >
       <Popover.Target>
-        <Button color="blue" onClick={() => setOpened((o) => !o)}>
+        <Button
+          color="blue"
+          disabled={disabled}
+          onClick={() => setOpened((o) => !o)}
+        >
           Change Publishing Status
         </Button>
       </Popover.Target>
@@ -137,6 +144,7 @@ const CourseSubmissionPublishPopover = ({
           <Button
             onClick={onUpdatePublishingStatus}
             loading={isUpdatingPublishingStatus}
+            disabled={disabled}
           >
             Publish to Groups
           </Button>

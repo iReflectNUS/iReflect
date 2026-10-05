@@ -1,4 +1,11 @@
-import { forwardRef, Ref, useImperativeHandle, useMemo } from "react";
+import {
+  forwardRef,
+  Ref,
+  useEffect,
+  useImperativeHandle,
+  useMemo,
+} from "react";
+import equal from "fast-deep-equal";
 import { skipToken } from "@reduxjs/toolkit/query/react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -132,6 +139,7 @@ export type SubmissionFormData = Omit<
 
 type SubmissionFormHandler = {
   reset: UseFormReset<SubmissionFormProps>;
+  hasUnsavedChanges: () => boolean;
 };
 
 type Props = {
@@ -141,6 +149,7 @@ type Props = {
   withComments?: boolean;
   onSubmit?: (formData: SubmissionFormData) => Promise<unknown>;
   submitButtonProps?: ButtonProps;
+  onDirtyChange?: (isDirty: boolean) => void;
 };
 
 function SubmissionForm(
@@ -151,6 +160,7 @@ function SubmissionForm(
     withComments,
     onSubmit: handleOnSubmit,
     submitButtonProps,
+    onDirtyChange,
   }: Props,
   ref: Ref<SubmissionFormHandler>,
 ) {
@@ -177,9 +187,27 @@ function SubmissionForm(
     control,
     handleSubmit,
     reset,
-    formState: { isSubmitting },
+    getValues,
+    formState: { isSubmitting, isDirty },
   } = methods;
-  useImperativeHandle(ref, () => ({ reset }), [reset]);
+  useImperativeHandle(
+    ref,
+    () => ({ reset, hasUnsavedChanges: () => isDirty }),
+    [reset, isDirty],
+  );
+  const hasUnsavedChanges = isDirty && !readOnly && !testMode;
+  useEffect(() => {
+    onDirtyChange?.(hasUnsavedChanges);
+  }, [hasUnsavedChanges, onDirtyChange]);
+  useEffect(() => {
+    if (!hasUnsavedChanges) return undefined;
+    const warnBeforeUnload = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+      event.returnValue = "";
+    };
+    window.addEventListener("beforeunload", warnBeforeUnload);
+    return () => window.removeEventListener("beforeunload", warnBeforeUnload);
+  }, [hasUnsavedChanges]);
   const courseId = useGetCourseId();
   const submissionId = useGetSubmissionId();
   const { commentCountError } = useGetSubmissionCommentCountQuery(
@@ -262,7 +290,12 @@ function SubmissionForm(
       formResponseData: formResponseData as FormResponseField[],
     };
 
-    await handleOnSubmit?.(formData);
+    if (handleOnSubmit) {
+      const valuesAtSave = getValues();
+      await handleOnSubmit(formData);
+      // Do not clear edits made while the save request was in flight.
+      if (equal(getValues(), valuesAtSave)) reset(rawFormData);
+    }
   };
 
   const feedbackContextValue = useMemo(
@@ -379,7 +412,35 @@ function SubmissionForm(
           ))}
 
           {!readOnly && (
-            <Group position="right">
+            <Group
+              position="right"
+              sx={(theme) => ({
+                position: "sticky",
+                bottom: 0,
+                backgroundColor:
+                  theme.colorScheme === "dark"
+                    ? theme.colors.dark[7]
+                    : theme.white,
+                padding: theme.spacing.sm,
+                zIndex: 2,
+                borderTop: `1px solid ${theme.colors.gray[3]}`,
+              })}
+            >
+              {!testMode && (() => {
+                let saveLabel = "No unsaved changes";
+                let saveColor: "dimmed" | "orange" = "dimmed";
+                if (isSubmitting) {
+                  saveLabel = "Saving…";
+                } else if (isDirty) {
+                  saveLabel = "Unsaved changes";
+                  saveColor = "orange";
+                }
+                return (
+                  <Text size="sm" color={saveColor} role="status">
+                    {saveLabel}
+                  </Text>
+                );
+              })()}
               <Button
                 {...{ children: testMode ? "Test" : "Save" }}
                 {...submitButtonProps}

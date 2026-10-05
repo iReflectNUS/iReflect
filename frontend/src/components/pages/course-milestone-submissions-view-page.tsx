@@ -1,4 +1,4 @@
-import { useRef, ElementRef, useEffect } from "react";
+import { useRef, ElementRef, useEffect, useState } from "react";
 import {
   Button,
   createStyles,
@@ -80,6 +80,7 @@ function CourseMilestoneSubmissionsViewPage() {
     );
   useResolveError({ error, name: "course-milestone-submissions-view-page" });
   const formRef = useRef<ElementRef<typeof SubmissionForm>>(null);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [updateSubmission, { isUpdating }] = useUpdateSubmissionMutation({
     selectFromResult: ({ isLoading: isUpdating }) => ({ isUpdating }),
   });
@@ -171,8 +172,13 @@ function CourseMilestoneSubmissionsViewPage() {
     });
 
   useEffect(() => {
-    if (submission) {
-      formRef.current?.reset(submission);
+    if (submission && !formRef.current?.hasUnsavedChanges()) {
+      formRef.current?.reset({
+        isDraft: submission.isDraft,
+        submissionType: submission.submissionType,
+        groupId: submission.group === null ? null : `${submission.group.id}`,
+        formResponseData: submission.formResponseData,
+      });
     }
   }, [submission]);
 
@@ -243,6 +249,7 @@ function CourseMilestoneSubmissionsViewPage() {
         <CourseSubmissionPublishSection
           courseId={courseId}
           submissionId={submissionId}
+          disabled={hasUnsavedChanges || isUpdating}
         />
       </ConditionalRenderer>
 
@@ -267,10 +274,12 @@ function CourseMilestoneSubmissionsViewPage() {
       >
         <LoadingOverlay visible={isFetching} />
         <SubmissionForm
+          key={`${courseId ?? ""}-${submissionId ?? ""}`}
           ref={formRef}
           defaultValues={submission}
           readOnly={!canModify}
           onSubmit={onUpdateSubmission}
+          onDirtyChange={setHasUnsavedChanges}
           withComments
           submitButtonProps={{ disabled: isDeleting }}
         />
