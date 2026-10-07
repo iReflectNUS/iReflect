@@ -7,6 +7,12 @@
 | v1.2.0  | Add Auto-Generated Questions sheet: surfaces the | REQ: 20261007-auto-question-excel            |
 |         | auto-generated reflective question + student ans |                                             |
 |         | wer (FeedbackInitialResponse) + AI feedback.     |                                             |
+| v1.3.0  | Source the sheet from form_field_data, Feedback- | REQ: 20261007-auto-question-excel            |
+|         | InitialResponse and AIFeedbackRecord, and match  |                                             |
+|         | whitespace/case tolerantly: the reflective quest |                                             |
+|         | ion is auto-generated and is not always present  |                                             |
+|         | as a static form field, so a field-only lookup   |                                             |
+|         | silently dropped the whole sheet.               |                                             |
 /@changelog
 
 @author chuckyang123
@@ -170,6 +176,27 @@ def response_value(form_response_data, label):
     return None
 
 
+def norm_text(value):
+    """Collapse whitespace and lowercase so a stored label carrying a newline,
+    a double space or different casing still matches. The auto-generated
+    reflective question is re-rendered by the playtest/reflection flow, so it is
+    not always byte-identical to the configured constant."""
+    return " ".join((value or "").split()).lower()
+
+
+def response_value_norm(form_response_data, target):
+    """response_value() but whitespace/case tolerant (target already normalized)."""
+    if not isinstance(form_response_data, list):
+        return None
+    for entry in form_response_data:
+        if not isinstance(entry, dict):
+            continue
+        label = entry.get("label") or entry.get("question")
+        if label and norm_text(label) == target:
+            return entry.get("response")
+    return None
+
+
 def student_columns(membership, group):
     """GROUP submissions present the group name in the name/email identity
     columns (design §3.4) while keeping the submitter id as the join key;
@@ -265,58 +292,66 @@ def build_workbook(user, course_id, milestone_id):
         sheet.append(row)
 
     # --- Auto-Generated Questions sheet ---------------------------------------
-    # The auto-generated reflective question (e.g. "Why did you stop ...?") is
-    # answered through the playtest/feedback flow, so its answer lands in
-    # FeedbackInitialResponse (and the AI reply in AIFeedbackRecord) rather than a
-    # plain form column. Surface it on its own sheet for quick review. Only build
-    # the sheet when at least one template in this milestone actually contains the
-    # target question, so unrelated exports are not given an empty sheet.
-    target = TARGET_QUESTION_TEXT.strip().lower()
+    # The auto-generated reflective question is not guaranteed to be a static
+    # form field: the playtest/reflection flow can render it and capture the
+    # student answer in FeedbackInitialResponse (with the AI reply in
+    # AIFeedbackRecord) instead. So look in all three places and surface
+    # whichever exists. Matching is whitespace/case tolerant, and the sheet is
+    # only added when this milestone actually carries data for the question.
+    target = norm_text(TARGET_QUESTION_TEXT)
+
     template_target = {}
     for template in templates:
         fields = template.form.form_field_data
         for field in fields if isinstance(fields, list) else []:
             if not isinstance(field, dict):
                 continue
-            field_question = (field.get("label") or field.get("question") or "").strip().lower()
-            if field_question == target:
-                template_target[template.id] = field.get("label") or field.get("question")
+            field_question = field.get("label") or field.get("question")
+            if field_question and norm_text(field_question) == target:
+                template_target[template.id] = field_question
                 break
 
-    if template_target:
-        initial_norm = {
-            (row.creator_id, (row.question or "").strip().lower()): row.initial_response
-            for row in initials
-            if row.creator_id is not None
-        }
-        feedback_by_submission = {}
-        for record in feedbacks:
-            feedback_by_submission.setdefault(record.version.submission_id, []).append(record)
+    initial_norm = {}
+    for row in initials:
+        if row.creator_id is None:
+            continue
+        initial_norm.setdefault((row.creator_id, norm_text(row.question)), row.initial_response)
 
+    feedback_by_submission = {}
+    for record in feedbacks:
+        feedback_by_submission.setdefault(record.version.submission_id, []).append(record)
+
+    auto_rows = []
+    for submission in submissions:
+        limiter.check(rows=0)
+        question_text = template_target.get(submission.template_id)
+        student_answer = response_value_norm(submission.form_response_data, target)
+        membership = submission.creator
+        member_id = membership.id if membership is not None else None
+        if student_answer is None:
+            student_answer = initial_norm.get((member_id, target))
+        ai_feedback = None
+        for record in feedback_by_submission.get(submission.id, []):
+            if norm_text(record.version.question) == target:
+                ai_feedback = record.feedback_content
+                break
+        if question_text is None and student_answer is None and ai_feedback is None:
+            continue
+        if question_text is None:
+            question_text = TARGET_QUESTION_TEXT
+        group_name = submission.group.name if submission.group is not None else None
+        student_id, student_name, student_email = student_columns(submission.creator, submission.group)
+        auto_rows.append([
+            student_id, cell_text(student_name), cell_text(student_email),
+            cell_text(group_name), submission.id, cell_text(submission.name),
+            cell_text(question_text), cell_text(student_answer), cell_text(ai_feedback),
+        ])
+
+    if auto_rows:
         sheet = workbook.create_sheet(AUTO_GEN_QUESTION_SHEET)
         sheet.append(AUTO_GEN_QUESTION_HEADER)
-        for submission in submissions:
-            limiter.check(rows=0)
-            question_text = template_target.get(submission.template_id)
-            if question_text is None:
-                continue
-            group_name = submission.group.name if submission.group is not None else None
-            student_id, student_name, student_email = student_columns(submission.creator, submission.group)
-            membership = submission.creator
-            member_id = membership.id if membership is not None else None
-            student_answer = response_value(submission.form_response_data, question_text)
-            if student_answer is None:
-                student_answer = initial_norm.get((member_id, target))
-            ai_feedback = None
-            for record in feedback_by_submission.get(submission.id, []):
-                if (record.version.question or "").strip().lower() == target:
-                    ai_feedback = record.feedback_content
-                    break
-            sheet.append([
-                student_id, cell_text(student_name), cell_text(student_email),
-                cell_text(group_name), submission.id, cell_text(submission.name),
-                cell_text(question_text), cell_text(student_answer), cell_text(ai_feedback),
-            ])
+        for row in auto_rows:
+            sheet.append(row)
 
     # Recheck permissions outside the repeatable-read snapshot, mirroring
     # research_export: a revoked instructor must not receive the file.

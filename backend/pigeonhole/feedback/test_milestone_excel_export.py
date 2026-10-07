@@ -142,6 +142,28 @@ class MilestoneExcelExportTests(TransactionTestCase):
         self.assertEqual(row["Student Answer"], "Because the workflow reached ARCHIVE_COMPLETE.")
         self.assertEqual(row["AI Feedback"], "Explain more.")
 
+    def test_auto_generated_question_found_via_feedback_response(self):
+        # The reflective question is auto-generated and need not exist as a
+        # static form field; only the reflection flow recorded it. The sheet
+        # must still appear with the student answer.
+        self.form.form_field_data = [{"label": "Plan", "type": "TEXT"}]
+        self.form.save()
+        FeedbackInitialResponse.objects.create(
+            course=self.course, milestone=self.milestone, template=self.template,
+            creator=self.student_membership, name="Reflection",
+            question=TARGET_QUESTION_TEXT,
+            initial_response="The paragraph showed the game's induced emotions clearly.",
+        )
+
+        data = self.sheets(self.download())
+        self.assertIn(AUTO_GEN_QUESTION_SHEET, data)
+        row = data[AUTO_GEN_QUESTION_SHEET][0]
+        self.assertEqual(row["Question"], TARGET_QUESTION_TEXT)
+        self.assertEqual(
+            row["Student Answer"],
+            "The paragraph showed the game's induced emotions clearly.",
+        )
+
     def test_draft_submission_marked(self):
         self.submission.is_draft = True
         self.submission.save()
