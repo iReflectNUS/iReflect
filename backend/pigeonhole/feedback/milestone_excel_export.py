@@ -19,6 +19,12 @@
 |         | so it has no template column and no question-    |                                             |
 |         | keyed record. Adds a "Field" column naming the   |                                             |
 |         | field the question was asked under.             |                                             |
+| v1.5.0  | Accept both key spellings: the DRF camel-case   | REQ: 20261007-auto-question-excel            |
+|         | parser underscoreizes nested JSON on save, so   |                                             |
+|         | the answer is stored as finalization_reason     |                                             |
+|         | (not finalizationReason). Reading only the      |                                             |
+|         | camelCase key found nothing even though the     |                                             |
+|         | student had answered and saved.                 |                                             |
 /@changelog
 
 @author chuckyang123
@@ -59,6 +65,9 @@ TARGET_QUESTION_TEXT = (
     "generating further feedback and finalize it?"
 )
 FINALIZATION_REASON_KEY = "finalizationReason"
+# The DRF camel-case parser underscoreizes nested JSON on the way in, so the same
+# answer can be stored under either spelling depending on how it was saved.
+FINALIZATION_REASON_SNAKE_KEY = "finalization_reason"
 # "Field" is the form field the reflective question was asked under, so a row is
 # readable when one submission carries several AI-feedback-enabled fields.
 AUTO_GEN_QUESTION_HEADER = [
@@ -192,6 +201,15 @@ def norm_text(value):
     reflective question is re-rendered by the playtest/reflection flow, so it is
     not always byte-identical to the configured constant."""
     return " ".join((value or "").split()).lower()
+
+
+def finalization_reason(entry):
+    """Read the stored finalization-reason answer, accepting both spellings."""
+    for key in (FINALIZATION_REASON_KEY, FINALIZATION_REASON_SNAKE_KEY):
+        value = entry.get(key)
+        if value not in (None, ""):
+            return value
+    return None
 
 
 def response_value_norm(form_response_data, target):
@@ -347,8 +365,8 @@ def build_workbook(user, course_id, milestone_id):
         for entry in entries:
             if not isinstance(entry, dict):
                 continue
-            student_answer = entry.get(FINALIZATION_REASON_KEY)
-            if student_answer in (None, ""):
+            student_answer = finalization_reason(entry)
+            if student_answer is None:
                 continue
             label = entry.get("label") or entry.get("question")
             auto_rows.append([

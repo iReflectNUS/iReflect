@@ -171,6 +171,31 @@ class MilestoneExcelExportTests(TransactionTestCase):
             "The paragraph showed the game's induced emotions clearly.",
         )
 
+    def test_auto_generated_question_accepts_underscoreized_key(self):
+        # The DRF camel-case parser underscoreizes nested JSON on save, so the
+        # same answer can come back stored as finalization_reason.
+        self.form.form_field_data = [
+            {"label": "Why?", "type": "TEXT_AREA", "hasFeedback": True},
+        ]
+        self.form.save()
+        self.submission.form_response_data = [
+            {
+                "label": "Why?",
+                "type": "TEXT_AREA",
+                "response": "ans",
+                "finalization_reason": "Saved with the underscoreized key.",
+            },
+        ]
+        self.submission.save()
+
+        data = self.sheets(self.download())
+        self.assertIn(AUTO_GEN_QUESTION_SHEET, data)
+        row = data[AUTO_GEN_QUESTION_SHEET][0]
+        self.assertEqual(row["Field"], "Why?")
+        self.assertEqual(
+            row["Student Answer"], "Saved with the underscoreized key."
+        )
+
     def test_draft_submission_marked(self):
         self.submission.is_draft = True
         self.submission.save()
