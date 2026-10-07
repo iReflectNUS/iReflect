@@ -4,6 +4,9 @@
 | v1.0.0  | Skeleton: milestone Excel export endpoint view   | REQ: 20260929-Excel导出功能升级 TECH: 04_design_tech-design.md §3.1-§3.5 |
 | v1.1.0  | Full pipeline: snapshot + 2-sheet xlsx + limits  | REQ: 20260929-Excel导出功能升级 TECH: 04_design_tech-design.md §3.4 |
 |         | (Submissions sheet + AI Feedback History sheet)  |                                             |
+| v1.2.0  | Add Auto-Generated Questions sheet: surfaces the | REQ: 20261007-auto-question-excel            |
+|         | auto-generated reflective question + student ans |                                             |
+|         | wer (FeedbackInitialResponse) + AI feedback.     |                                             |
 /@changelog
 
 @author chuckyang123
@@ -34,6 +37,18 @@ CELL_TEXT_LIMIT = 32767
 TRUNCATION_SUFFIX = "\n[Truncated; full text in AI Feedback History]"
 SUBMISSIONS_SHEET = "Submissions"
 FEEDBACK_SHEET = "AI Feedback History"
+AUTO_GEN_QUESTION_SHEET = "Auto-Generated Questions"
+# The reflective question auto-generated for students. Its answer is captured via
+# the playtest/feedback flow (FeedbackInitialResponse) rather than a plain form
+# column, so it is surfaced on its own sheet. Match is case-insensitive + trimmed.
+TARGET_QUESTION_TEXT = (
+    "In the previous interaction with AI feedback, why did you stop "
+    "generating further feedback and finalize it?"
+)
+AUTO_GEN_QUESTION_HEADER = [
+    "Student ID", "Student Name", "Student Email", "Group", "Submission ID",
+    "Submission Name", "Question", "Student Answer", "AI Feedback",
+]
 SUBMISSION_HEADER = [
     "Student ID", "Student Name", "Student Email", "Group", "Submission ID",
     "Submission Name", "Submission Type", "Status", "Created At (UTC)",
@@ -249,6 +264,60 @@ def build_workbook(user, course_id, milestone_id):
         ]
         sheet.append(row)
 
+    # --- Auto-Generated Questions sheet ---------------------------------------
+    # The auto-generated reflective question (e.g. "Why did you stop ...?") is
+    # answered through the playtest/feedback flow, so its answer lands in
+    # FeedbackInitialResponse (and the AI reply in AIFeedbackRecord) rather than a
+    # plain form column. Surface it on its own sheet for quick review. Only build
+    # the sheet when at least one template in this milestone actually contains the
+    # target question, so unrelated exports are not given an empty sheet.
+    target = TARGET_QUESTION_TEXT.strip().lower()
+    template_target = {}
+    for template in templates:
+        fields = template.form.form_field_data
+        for field in fields if isinstance(fields, list) else []:
+            if not isinstance(field, dict):
+                continue
+            field_question = (field.get("label") or field.get("question") or "").strip().lower()
+            if field_question == target:
+                template_target[template.id] = field.get("label") or field.get("question")
+                break
+
+    if template_target:
+        initial_norm = {
+            (row.creator_id, (row.question or "").strip().lower()): row.initial_response
+            for row in initials
+            if row.creator_id is not None
+        }
+        feedback_by_submission = {}
+        for record in feedbacks:
+            feedback_by_submission.setdefault(record.version.submission_id, []).append(record)
+
+        sheet = workbook.create_sheet(AUTO_GEN_QUESTION_SHEET)
+        sheet.append(AUTO_GEN_QUESTION_HEADER)
+        for submission in submissions:
+            limiter.check(rows=0)
+            question_text = template_target.get(submission.template_id)
+            if question_text is None:
+                continue
+            group_name = submission.group.name if submission.group is not None else None
+            student_id, student_name, student_email = student_columns(submission.creator, submission.group)
+            membership = submission.creator
+            member_id = membership.id if membership is not None else None
+            student_answer = response_value(submission.form_response_data, question_text)
+            if student_answer is None:
+                student_answer = initial_norm.get((member_id, target))
+            ai_feedback = None
+            for record in feedback_by_submission.get(submission.id, []):
+                if (record.version.question or "").strip().lower() == target:
+                    ai_feedback = record.feedback_content
+                    break
+            sheet.append([
+                student_id, cell_text(student_name), cell_text(student_email),
+                cell_text(group_name), submission.id, cell_text(submission.name),
+                cell_text(question_text), cell_text(student_answer), cell_text(ai_feedback),
+            ])
+
     # Recheck permissions outside the repeatable-read snapshot, mirroring
     # research_export: a revoked instructor must not receive the file.
     fresh_user = User.objects.get(pk=user.pk)
@@ -268,7 +337,9 @@ def build_workbook(user, course_id, milestone_id):
 class MilestoneExcelExportView(APIView):
     """Per-milestone Excel export for teachers: Sheet 1 is the current
     submissions snapshot with dynamic form columns; Sheet 2 is the full AI
-    feedback history, one row per feedback record with its answer version."""
+    feedback history, one row per feedback record with its answer version;
+    Sheet 3 (Auto-Generated Questions) surfaces the auto-generated reflective
+    question plus each student's answer and the AI reply, when present."""
 
     def post(self, request):
         # JWTTokenUserAuthentication returns a token user, not our domain User.
