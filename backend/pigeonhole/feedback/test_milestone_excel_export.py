@@ -18,7 +18,12 @@ from courses.models import (
     Role, SubmissionType,
 )
 from users.models import AccountType, User
-from .milestone_excel_export import CELL_TEXT_LIMIT, TRUNCATION_SUFFIX
+from .milestone_excel_export import (
+    CELL_TEXT_LIMIT,
+    TRUNCATION_SUFFIX,
+    TARGET_QUESTION_TEXT,
+    AUTO_GEN_QUESTION_SHEET,
+)
 from .models import AIFeedbackRecord, FeedbackAnswerVersion, FeedbackInitialResponse
 from .research_export import export_guard
 from .test_ai_feedback_verification import AIFeedbackBase, jwt_client
@@ -112,6 +117,30 @@ class MilestoneExcelExportTests(TransactionTestCase):
         self.assertEqual(row["Last Editor"], "Student")
         self.assertEqual(row["Why?"], "第一版答案")
         self.assertEqual(row["Plan"], "A; B")
+
+    def test_auto_generated_question_sheet_includes_answer(self):
+        self.form.form_field_data = [
+            {"label": TARGET_QUESTION_TEXT, "type": "TEXTAREA"},
+            {"label": "Plan", "type": "TEXT"},
+        ]
+        self.form.save()
+        FeedbackInitialResponse.objects.create(
+            course=self.course, milestone=self.milestone, template=self.template,
+            creator=self.student_membership, name="Reflection",
+            question=TARGET_QUESTION_TEXT,
+            initial_response="Because the workflow reached ARCHIVE_COMPLETE.",
+        )
+        self.record("v1 answer", 1, question=TARGET_QUESTION_TEXT)
+
+        data = self.sheets(self.download())
+        self.assertIn(AUTO_GEN_QUESTION_SHEET, data)
+        rows = data[AUTO_GEN_QUESTION_SHEET]
+        self.assertEqual(len(rows), 1)
+        row = rows[0]
+        self.assertEqual(row["Student ID"], self.student.id)
+        self.assertEqual(row["Question"], TARGET_QUESTION_TEXT)
+        self.assertEqual(row["Student Answer"], "Because the workflow reached ARCHIVE_COMPLETE.")
+        self.assertEqual(row["AI Feedback"], "Explain more.")
 
     def test_draft_submission_marked(self):
         self.submission.is_draft = True
