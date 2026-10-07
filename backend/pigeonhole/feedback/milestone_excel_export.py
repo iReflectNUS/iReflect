@@ -13,6 +13,18 @@
 |         | ion is auto-generated and is not always present  |                                             |
 |         | as a static form field, so a field-only lookup   |                                             |
 |         | silently dropped the whole sheet.               |                                             |
+| v1.4.0  | Read the answer from form_response_data[index]   | REQ: 20261007-auto-question-excel            |
+|         | ["finalizationReason"]: PRD 20260901 stores it   |                                             |
+|         | on the owning field, not as a field of its own,  |                                             |
+|         | so it has no template column and no question-    |                                             |
+|         | keyed record. Adds a "Field" column naming the   |                                             |
+|         | field the question was asked under.             |                                             |
+| v1.5.0  | Accept both key spellings: the DRF camel-case   | REQ: 20261007-auto-question-excel            |
+|         | parser underscoreizes nested JSON on save, so   |                                             |
+|         | the answer is stored as finalization_reason     |                                             |
+|         | (not finalizationReason). Reading only the      |                                             |
+|         | camelCase key found nothing even though the     |                                             |
+|         | student had answered and saved.                 |                                             |
 /@changelog
 
 @author chuckyang123
@@ -44,16 +56,23 @@ TRUNCATION_SUFFIX = "\n[Truncated; full text in AI Feedback History]"
 SUBMISSIONS_SHEET = "Submissions"
 FEEDBACK_SHEET = "AI Feedback History"
 AUTO_GEN_QUESTION_SHEET = "Auto-Generated Questions"
-# The reflective question auto-generated for students. Its answer is captured via
-# the playtest/feedback flow (FeedbackInitialResponse) rather than a plain form
-# column, so it is surfaced on its own sheet. Match is case-insensitive + trimmed.
+# The reflective question the frontend renders under every TextArea that has AI
+# feedback enabled (PRD 20260901). It is NOT a form field: the answer is stored
+# on the field that owns it, under the key below (see form-field-renderer.tsx,
+# which registers it as formResponseData[index].finalizationReason).
 TARGET_QUESTION_TEXT = (
     "In the previous interaction with AI feedback, why did you stop "
     "generating further feedback and finalize it?"
 )
+FINALIZATION_REASON_KEY = "finalizationReason"
+# The DRF camel-case parser underscoreizes nested JSON on the way in, so the same
+# answer can be stored under either spelling depending on how it was saved.
+FINALIZATION_REASON_SNAKE_KEY = "finalization_reason"
+# "Field" is the form field the reflective question was asked under, so a row is
+# readable when one submission carries several AI-feedback-enabled fields.
 AUTO_GEN_QUESTION_HEADER = [
     "Student ID", "Student Name", "Student Email", "Group", "Submission ID",
-    "Submission Name", "Question", "Student Answer", "AI Feedback",
+    "Submission Name", "Field", "Question", "Student Answer", "AI Feedback",
 ]
 SUBMISSION_HEADER = [
     "Student ID", "Student Name", "Student Email", "Group", "Submission ID",
@@ -184,6 +203,15 @@ def norm_text(value):
     return " ".join((value or "").split()).lower()
 
 
+def finalization_reason(entry):
+    """Read the stored finalization-reason answer, accepting both spellings."""
+    for key in (FINALIZATION_REASON_KEY, FINALIZATION_REASON_SNAKE_KEY):
+        value = entry.get(key)
+        if value not in (None, ""):
+            return value
+    return None
+
+
 def response_value_norm(form_response_data, target):
     """response_value() but whitespace/case tolerant (target already normalized)."""
     if not isinstance(form_response_data, list):
@@ -292,24 +320,15 @@ def build_workbook(user, course_id, milestone_id):
         sheet.append(row)
 
     # --- Auto-Generated Questions sheet ---------------------------------------
-    # The auto-generated reflective question is not guaranteed to be a static
-    # form field: the playtest/reflection flow can render it and capture the
-    # student answer in FeedbackInitialResponse (with the AI reply in
-    # AIFeedbackRecord) instead. So look in all three places and surface
-    # whichever exists. Matching is whitespace/case tolerant, and the sheet is
-    # only added when this milestone actually carries data for the question.
+    # PRD 20260901 renders the reflective "why did you stop generating feedback?"
+    # question under every TextArea that has AI feedback enabled. It is not a
+    # form field, so it has no template column: the frontend stores the answer on
+    # the field that owns it, as form_response_data[index]["finalizationReason"].
+    # Read it from there (one row per owning field), and fall back to the older
+    # capture paths so rows recorded before that change are still exported.
+    # Matching is whitespace/case tolerant and the sheet only appears when this
+    # milestone actually carries an answer for the question.
     target = norm_text(TARGET_QUESTION_TEXT)
-
-    template_target = {}
-    for template in templates:
-        fields = template.form.form_field_data
-        for field in fields if isinstance(fields, list) else []:
-            if not isinstance(field, dict):
-                continue
-            field_question = field.get("label") or field.get("question")
-            if field_question and norm_text(field_question) == target:
-                template_target[template.id] = field_question
-                break
 
     initial_norm = {}
     for row in initials:
@@ -321,30 +340,61 @@ def build_workbook(user, course_id, milestone_id):
     for record in feedbacks:
         feedback_by_submission.setdefault(record.version.submission_id, []).append(record)
 
+    def ai_feedback_for(submission_id, label):
+        """Latest AI reply recorded for this submission + owning field."""
+        if not label:
+            return None
+        wanted = norm_text(label)
+        for record in feedback_by_submission.get(submission_id, []):
+            if norm_text(record.version.question) == wanted:
+                return record.feedback_content
+        return None
+
     auto_rows = []
     for submission in submissions:
         limiter.check(rows=0)
-        question_text = template_target.get(submission.template_id)
-        student_answer = response_value_norm(submission.form_response_data, target)
+        entries = submission.form_response_data
+        if not isinstance(entries, list):
+            entries = []
+        group_name = submission.group.name if submission.group is not None else None
+        student_id, student_name, student_email = student_columns(submission.creator, submission.group)
         membership = submission.creator
         member_id = membership.id if membership is not None else None
+
+        matched = False
+        for entry in entries:
+            if not isinstance(entry, dict):
+                continue
+            student_answer = finalization_reason(entry)
+            if student_answer is None:
+                continue
+            label = entry.get("label") or entry.get("question")
+            auto_rows.append([
+                student_id, cell_text(student_name), cell_text(student_email),
+                cell_text(group_name), submission.id, cell_text(submission.name),
+                cell_text(label), cell_text(TARGET_QUESTION_TEXT),
+                cell_text(student_answer), cell_text(ai_feedback_for(submission.id, label)),
+            ])
+            matched = True
+        if matched:
+            continue
+
+        # Nothing stored on a field: try the pre-PRD-20260901 capture paths.
+        student_answer = response_value_norm(entries, target)
         if student_answer is None:
             student_answer = initial_norm.get((member_id, target))
+        if student_answer is None:
+            continue
         ai_feedback = None
         for record in feedback_by_submission.get(submission.id, []):
             if norm_text(record.version.question) == target:
                 ai_feedback = record.feedback_content
                 break
-        if question_text is None and student_answer is None and ai_feedback is None:
-            continue
-        if question_text is None:
-            question_text = TARGET_QUESTION_TEXT
-        group_name = submission.group.name if submission.group is not None else None
-        student_id, student_name, student_email = student_columns(submission.creator, submission.group)
         auto_rows.append([
             student_id, cell_text(student_name), cell_text(student_email),
             cell_text(group_name), submission.id, cell_text(submission.name),
-            cell_text(question_text), cell_text(student_answer), cell_text(ai_feedback),
+            None, cell_text(TARGET_QUESTION_TEXT),
+            cell_text(student_answer), cell_text(ai_feedback),
         ])
 
     if auto_rows:

@@ -119,18 +119,24 @@ class MilestoneExcelExportTests(TransactionTestCase):
         self.assertEqual(row["Plan"], "A; B")
 
     def test_auto_generated_question_sheet_includes_answer(self):
+        # PRD 20260901: the reflective question is not a form field. Its answer
+        # is stored on the field that owns it, as "finalizationReason".
         self.form.form_field_data = [
-            {"label": TARGET_QUESTION_TEXT, "type": "TEXTAREA"},
+            {"label": "Why?", "type": "TEXTAREA", "hasFeedback": True},
             {"label": "Plan", "type": "TEXT"},
         ]
         self.form.save()
-        FeedbackInitialResponse.objects.create(
-            course=self.course, milestone=self.milestone, template=self.template,
-            creator=self.student_membership, name="Reflection",
-            question=TARGET_QUESTION_TEXT,
-            initial_response="Because the workflow reached ARCHIVE_COMPLETE.",
-        )
-        self.record("v1 answer", 1, question=TARGET_QUESTION_TEXT)
+        self.submission.form_response_data = [
+            {
+                "label": "Why?",
+                "type": "TEXTAREA",
+                "response": "第一版答案",
+                "finalizationReason": "Because the workflow reached ARCHIVE_COMPLETE.",
+            },
+            {"label": "Plan", "type": "TEXT", "response": ["A", "B"]},
+        ]
+        self.submission.save()
+        self.record("v1 answer", 1, question="Why?")
 
         data = self.sheets(self.download())
         self.assertIn(AUTO_GEN_QUESTION_SHEET, data)
@@ -138,6 +144,7 @@ class MilestoneExcelExportTests(TransactionTestCase):
         self.assertEqual(len(rows), 1)
         row = rows[0]
         self.assertEqual(row["Student ID"], self.student.id)
+        self.assertEqual(row["Field"], "Why?")
         self.assertEqual(row["Question"], TARGET_QUESTION_TEXT)
         self.assertEqual(row["Student Answer"], "Because the workflow reached ARCHIVE_COMPLETE.")
         self.assertEqual(row["AI Feedback"], "Explain more.")
@@ -162,6 +169,31 @@ class MilestoneExcelExportTests(TransactionTestCase):
         self.assertEqual(
             row["Student Answer"],
             "The paragraph showed the game's induced emotions clearly.",
+        )
+
+    def test_auto_generated_question_accepts_underscoreized_key(self):
+        # The DRF camel-case parser underscoreizes nested JSON on save, so the
+        # same answer can come back stored as finalization_reason.
+        self.form.form_field_data = [
+            {"label": "Why?", "type": "TEXT_AREA", "hasFeedback": True},
+        ]
+        self.form.save()
+        self.submission.form_response_data = [
+            {
+                "label": "Why?",
+                "type": "TEXT_AREA",
+                "response": "ans",
+                "finalization_reason": "Saved with the underscoreized key.",
+            },
+        ]
+        self.submission.save()
+
+        data = self.sheets(self.download())
+        self.assertIn(AUTO_GEN_QUESTION_SHEET, data)
+        row = data[AUTO_GEN_QUESTION_SHEET][0]
+        self.assertEqual(row["Field"], "Why?")
+        self.assertEqual(
+            row["Student Answer"], "Saved with the underscoreized key."
         )
 
     def test_draft_submission_marked(self):
