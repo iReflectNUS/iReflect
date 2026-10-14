@@ -1,0 +1,29 @@
+{
+  "date": "2026-10-15",
+  "baseline_commit": "0fff35524e8dbadb61ccb5248f8895970373d7a6",
+  "grading_prefix_and_rubrics_exact_equal": true,
+  "total_grade_instruction_exact_equal": true,
+  "module_AST_equal_after_only_prompt_restored": true,
+  "unchanged_model_temperature_single_call_answer_and_return": true,
+  "actual_API_calls": 0,
+  "real_database_access": false,
+  "unchanged_other_tracked_business_files": [
+    "backend/pigeonhole/feedback/models.py",
+    "backend/pigeonhole/feedback/serializers.py",
+    "backend/pigeonhole/feedback/urls.py",
+    "backend/pigeonhole/feedback/views.py",
+    "frontend/src/components/course-submission-feedback-history-section.tsx",
+    "frontend/src/components/form-field-feedback-renderer.tsx",
+    "frontend/src/types/feedback.ts"
+  ],
+  "full_prompt_sha256": "cbc3a0e3736aab398bb1a2252094b4ef4fef498f4bb81788f72a00be08123fb3",
+  "syntax_compile": true,
+  "readiness": "Eligible for controlled A/B candidate code push; feedback-quality benefit and identical numeric model grades not established; production rollout not performed.",
+  "existing_regression_tests": {
+    "suite": "feedback.test_ai_feedback_verification",
+    "tests": 23,
+    "passed": true,
+    "database": "isolated in-memory SQLite",
+    "providers_disabled": true
+  }
+}
