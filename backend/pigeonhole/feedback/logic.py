@@ -289,7 +289,7 @@ def _mock_openai_feedback(text: str) -> str:
 
 # Returns response from ChatGPT in a single string, which might contain newlines.
 # Uses a basic prompt
-def askChatGPTOriginal(text):
+def _askChatGPTOriginalScored(text):
     if not os.getenv("OPENAI_API_KEY"):
         if settings.DEBUG:
             logger.warning(
@@ -345,6 +345,33 @@ def askChatGPTOriginal(text):
     latency_ms = (time.time() - start_time) * 1000
 
     return response, None, usage, latency_ms
+
+
+def askChatGPTOriginal(text, question=None):
+    """A/B version A: original scoring call, followed by frozen v7 feedback."""
+    if os.getenv("OPENAI_API_KEY") and not (isinstance(question, str) and question.strip()):
+        raise FeedbackNotConfiguredError("The task question is required for v7 feedback.")
+    graded, score_json, score_usage, score_latency = _askChatGPTOriginalScored(text)
+    if not os.getenv("OPENAI_API_KEY"):
+        return graded, score_json, score_usage, score_latency
+    from .v7 import V7FeedbackError, generate_feedback, reflection_score_block
+    try:
+        score_block = reflection_score_block(graded)
+        feedback, usages, latency = generate_feedback(question, text)
+    except V7FeedbackError as exc:
+        raise FeedbackNotConfiguredError(str(exc)) from exc
+    usage = _merge_usage_dicts([score_usage, *usages])
+    usage["feedback_prompt_version"] = "T1_v3+T2_v7_guided"
+    # Preserve the grader's original evidence for later score audits without
+    # showing its superseded advice as part of the new student feedback.
+    score_json = {**(score_json or {}), "original_grading_response": graded,
+                  "grading_method": "basic_original"}
+    return (
+        score_block + "\n\n**Professor Feedback:**\n\n" + feedback,
+        score_json,
+        usage,
+        score_latency + latency,
+    )
 
 
 # Returns response from ChatGPT in a single string, which might contain newlines.

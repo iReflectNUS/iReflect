@@ -44,6 +44,7 @@ class PostFeedbackRecordSerializer(serializers.Serializer):
     # Parsed by the frontend from the LightRAG score block; absent when the
     # response carried no parsable scores (still stored as null, not rejected).
     score_json = serializers.JSONField(required=False, allow_null=True)
+    model_version = serializers.CharField(required=False, allow_blank=True, max_length=255)
 
 
 class FeedbackRecordQuerySerializer(serializers.Serializer):

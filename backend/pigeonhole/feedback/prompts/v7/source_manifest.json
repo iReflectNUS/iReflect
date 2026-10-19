@@ -1,0 +1,12 @@
+{
+  "source": "output/rq2_final_v7_20261015/prompt_package",
+  "selection": "T1_v3 + T2_v7_guided",
+  "files": {
+    "T1_current_assessment_v3.txt": "494d7d37abc2bb0bfc16beadf7dfb23580a28846e8a04ff9734eb19d5ce627e2",
+    "T2_feedback_v7_guided.txt": "49e40144c7dfdf884442b38f9e545ca970b525247284c79047a53c0e93de84e4",
+    "assessment_schema_v3.json": "ddda992f0c6a35af568420bbc26c61c27c2537f813903275fecc01bbbdd3b617",
+    "stage2_envelope_v3.json": "4c19b1f4cfe17b2d77e1d598ae7f1610698a796c123536341205a05d3ddda94e",
+    "feedback_schema.json": "da9f4a36c67fbba5a516ebfdb7d8772d2eb0e42a299a722927abc823a832e434",
+    "configuration.json": "1dd8947c7fbbb77ea61464f6bc7b841ccaee62b95a7ab1e223f37b5a168b9720"
+  }
+}

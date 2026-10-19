@@ -1,0 +1,28 @@
+{
+  "selection": "T1_v3 + T2_v7_guided; final research candidate, not the older single-pass v7/v7.2",
+  "date": "2026-10-15",
+  "architecture_model_stages": 2,
+  "generation_model": "gpt-4o-2024-08-06",
+  "temperature": 0.1,
+  "max_tokens": 5000,
+  "evaluation_model": "gpt-4.1-2025-04-14",
+  "evaluation_temperature": 0,
+  "evaluation_weights": {
+    "relevance": 20,
+    "grounding": 25,
+    "coverage": 25,
+    "actionability": 20,
+    "economy": 10
+  },
+  "student_suggestions_max": 2,
+  "student_field_word_limit": 180,
+  "editorial_target": 165,
+  "complete_rendered_word_limit_acceptance_target": 180,
+  "limit_boundary": "Exact v7 instruction counts summary/strength comments/acknowledges/gap/nextStep. Full render with contextLimits/headings was also measured; observed <=159 in S15C, not a universal guarantee. Do not silently insert v8 wording into frozen v7.",
+  "T1_context": "task and current only; no history",
+  "T2_context": "same task/current plus at most one matched previousAnswer/previousFeedback and fallible currentAssessment; no new requirement from history",
+  "scoring": "Feedback only; no student scores produced or changed. Existing project grading is separate and untouched.",
+  "evidence_boundary": "S15C/S15D replayed24 source-corrected T1 records; correction was researcher-assisted, not an automatically validated stage or a third LLM call.",
+  "source_review_provenance": "Source adjudication/correction was conducted by the assistant against Q/C, not by independently recruited teachers. Uploaded human ratings are separate evidence. Source-review/chat effort is not included in experiment API-token totals.",
+  "execution": "No remote API client/credentials included or invoked; package documentation only."
+}

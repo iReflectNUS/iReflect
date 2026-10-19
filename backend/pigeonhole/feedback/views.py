@@ -65,7 +65,7 @@ class FeedbackView(APIView):
             if requester.id % 2 == 0:
                 strategy = AIFeedbackRecord.STRATEGY_BASIC
                 feedback, score_json, token_usage_json, latency_ms = askChatGPTOriginal(
-                    validated_data["content"]
+                    validated_data["content"], question=validated_data.get("question")
                 )
             else:
                 strategy = AIFeedbackRecord.STRATEGY_ADVANCED
@@ -93,6 +93,7 @@ class FeedbackView(APIView):
                     score_json=score_json,
                     token_usage_json=token_usage_json,
                     latency_ms=latency_ms,
+                    model_version=(token_usage_json or {}).get("feedback_prompt_version", ""),
                 )
             except ValueError as e:
                 raise BadRequest(detail=e)
@@ -173,6 +174,7 @@ class FeedbackRecordView(APIView):
                 score_json=validated_data.get("score_json"),
                 genre=validated_data.get("genre"),
                 mechanic=validated_data.get("mechanic"),
+                model_version=validated_data.get("model_version", ""),
             )
         except ValueError as e:
             raise BadRequest(detail=e)

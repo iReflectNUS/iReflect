@@ -41,7 +41,9 @@ services:
     image: szelongq/ireflect-backend:production
     build:
       context: ./backend
-    command: sh -c "cd pigeonhole && gunicorn pigeonhole.wsgi:application --bind 0.0.0.0:8000"
+    command: sh -c "cd pigeonhole && gunicorn pigeonhole.wsgi:application --bind 0.0.0.0:8000 --timeout 240"
+    environment:
+      LIGHTRAG_URL: http://lightrag:9621
     volumes:
       - static-volume:/app/static
     networks:

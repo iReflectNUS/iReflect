@@ -113,6 +113,10 @@ function FormFieldPlaytestFeedbackRenderer({
       return;
     }
     if (!content || isFetching || isLoading) return;
+    if (!promptText) {
+      setInputError("The scoring rubric is still loading. Please try again.");
+      return;
+    }
 
     const fullQuery = `
       ${promptText}
@@ -123,6 +127,7 @@ function FormFieldPlaytestFeedbackRenderer({
     `;
 
     let playtestResponse = "";
+    let feedbackPromptVersion: string | undefined;
     try {
       setisFetching(true);
       const res = await fetch(
@@ -133,14 +138,25 @@ function FormFieldPlaytestFeedbackRenderer({
             "Content-Type": "application/json",
             "X-API-Key": "your-secure-api-key-here",
           },
-          body: JSON.stringify({ query: fullQuery, mode: "hybrid" }),
+          body: JSON.stringify({
+            query: fullQuery,
+            mode: "hybrid",
+            question,
+            answer: content,
+          }),
         },
       );
       if (!res.ok) {
         throw new Error(`Playtest request failed: HTTP ${res.status}`);
       }
 
-      const raw = (await res.json()) as { response?: string };
+      const raw = (await res.json()) as {
+        response?: string;
+        feedbackPromptVersion?: string;
+        feedback_prompt_version?: string;
+      };
+      feedbackPromptVersion =
+        raw.feedbackPromptVersion ?? raw.feedback_prompt_version;
       // Drop unfilled placeholders ([XX/100]) before showing or storing it.
       playtestResponse = sanitizeScorePlaceholders(
         raw.response ?? "No feedback returned.",
@@ -187,6 +203,7 @@ function FormFieldPlaytestFeedbackRenderer({
         initial_response: content,
         feedback_content: playtestResponse,
         score_json: parsePlaytestScores(playtestResponse),
+        model_version: feedbackPromptVersion,
         idempotency_key: crypto.randomUUID(),
       }).unwrap();
       console.log("Saved feedback record.");
