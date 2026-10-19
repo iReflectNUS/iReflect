@@ -15,6 +15,7 @@ from django.conf import settings
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from .v7 import V7FeedbackError, generate_feedback, replace_playtest_advice
 
 logger = logging.getLogger(__name__)
 
@@ -43,9 +44,8 @@ def _mock_playtest_feedback(query: str) -> str:
 class PlaytestFeedbackView(APIView):
     """Proxies playtest feedback requests to the LightRAG /query endpoint.
 
-    In production nginx routes /api/playtest/ straight to the lightrag
-    container, so this view is only exercised in local dev where the Django
-    server is hit directly at http://localhost:8001/api/playtest/.
+    Both production and local requests pass here. LightRAG still determines
+    scores; only the student advice is replaced by the frozen v7 pipeline.
     """
 
     authentication_classes = []
@@ -54,20 +54,39 @@ class PlaytestFeedbackView(APIView):
     def post(self, request):
         query = request.data.get("query", "")
         mode = request.data.get("mode", "hybrid")
+        question = request.data.get("question")
+        answer = request.data.get("answer")
+        if not isinstance(query, str) or not query.strip():
+            return Response({"detail": "query is required."},
+                            status=status.HTTP_400_BAD_REQUEST)
 
         lightrag_url = os.getenv("LIGHTRAG_URL")
         if lightrag_url:
+            if (not isinstance(question, str) or not question.strip()
+                    or not isinstance(answer, str) or not answer.strip()):
+                return Response({"detail": "question and answer are required for v7 feedback."},
+                                status=status.HTTP_400_BAD_REQUEST)
             try:
                 resp = requests.post(
                     f"{lightrag_url}/query",
                     json={"query": query, "mode": mode},
                     headers={"X-API-Key": LIGHTRAG_API_KEY},
-                    timeout=15,
+                    timeout=60,
                 )
                 resp.raise_for_status()
-                return Response({"response": resp.json().get("response", "")})
+                graded = resp.json().get("response", "")
             except requests.RequestException as exc:
                 logger.warning("LightRAG unavailable (%s).", exc)
+            else:
+                try:
+                    # Do not feed score-driven advice or KG requirements into v7.
+                    # A missing provider is not permission to present the old prompt as v7.
+                    feedback, _, _ = generate_feedback(question, answer)
+                    return Response({"response": replace_playtest_advice(graded, feedback),
+                                     "feedback_prompt_version": "T1_v3+T2_v7_guided"})
+                except V7FeedbackError as exc:
+                    return Response({"detail": str(exc)},
+                                    status=status.HTTP_503_SERVICE_UNAVAILABLE)
         else:
             logger.warning("LIGHTRAG_URL is not set.")
 

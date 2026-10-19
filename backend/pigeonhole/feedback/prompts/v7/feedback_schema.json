@@ -1,0 +1,201 @@
+{
+  "type": "object",
+  "properties": {
+    "summary": {
+      "type": "string"
+    },
+    "strengths": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "currentEvidenceIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "comment": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "currentEvidenceIds",
+          "comment"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "suggestions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "questionEvidenceIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "currentEvidenceIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "acknowledges": {
+            "type": "string"
+          },
+          "gap": {
+            "type": "string"
+          },
+          "nextStep": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "questionEvidenceIds",
+          "currentEvidenceIds",
+          "acknowledges",
+          "gap",
+          "nextStep"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "contextLimits": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "historyAudit": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "previousFeedbackEvidenceIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "previousAnswerEvidenceIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "currentEvidenceIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "resolved",
+              "still_open",
+              "previous_error",
+              "not_required",
+              "cannot_verify"
+            ]
+          },
+          "finding": {
+            "type": "string"
+          },
+          "explanationRisk": {
+            "type": "string",
+            "enum": [
+              "vague_prior_instruction",
+              "unsupported_prior_diagnosis",
+              "possible_instruction_revision_mismatch",
+              "none_identified",
+              "cannot_verify"
+            ]
+          },
+          "studentReason": {
+            "type": "string",
+            "enum": [
+              "not_established"
+            ]
+          }
+        },
+        "required": [
+          "previousFeedbackEvidenceIds",
+          "previousAnswerEvidenceIds",
+          "currentEvidenceIds",
+          "status",
+          "finding",
+          "explanationRisk",
+          "studentReason"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "newOrMissedGaps": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "questionEvidenceIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "previousAnswerEvidenceIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "currentEvidenceIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "classification": {
+            "type": "string",
+            "enum": [
+              "missed_by_previous_feedback",
+              "introduced_in_revision",
+              "currently_present_origin_unknown"
+            ]
+          },
+          "gap": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "questionEvidenceIds",
+          "previousAnswerEvidenceIds",
+          "currentEvidenceIds",
+          "classification",
+          "gap"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "completion": {
+      "type": "string",
+      "enum": [
+        "revision_suggested",
+        "assessment_limited",
+        "no_material_gap"
+      ]
+    }
+  },
+  "required": [
+    "summary",
+    "strengths",
+    "suggestions",
+    "contextLimits",
+    "historyAudit",
+    "newOrMissedGaps",
+    "completion"
+  ],
+  "additionalProperties": false
+}

@@ -56,6 +56,7 @@ export type FeedbackRecordPostData = {
   [MECHANIC]?: string;
   [IDEMPOTENCY_KEY]?: string;
   [SCORE_JSON]?: PlaytestScoreJson | null;
+  model_version?: string;
 };
 
 /** Structured playtest scores parsed out of the LightRAG score block. */

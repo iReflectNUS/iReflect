@@ -1,0 +1,166 @@
+{
+  "type": "object",
+  "properties": {
+    "requirements": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "requirementId": {
+            "type": "string"
+          },
+          "questionEvidenceIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "taskQuote": {
+            "type": "string"
+          },
+          "requirement": {
+            "type": "string"
+          },
+          "condition": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "satisfied",
+              "partially_satisfied",
+              "absent",
+              "unverifiable",
+              "not_active"
+            ]
+          },
+          "currentEvidence": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "quote": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "id",
+                "quote"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "remainingGap": {
+            "type": "string"
+          },
+          "limit": {
+            "type": "string"
+          },
+          "contentChecks": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "checkId": {
+                  "type": "string"
+                },
+                "locate": {
+                  "type": "string"
+                },
+                "sourceValue": {
+                  "type": "string"
+                },
+                "support": {
+                  "type": "string",
+                  "enum": [
+                    "supported",
+                    "not_stated",
+                    "unverifiable",
+                    "not_applicable"
+                  ]
+                },
+                "evidenceIds": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              },
+              "required": [
+                "checkId",
+                "locate",
+                "sourceValue",
+                "support",
+                "evidenceIds"
+              ],
+              "additionalProperties": false
+            }
+          }
+        },
+        "required": [
+          "requirementId",
+          "questionEvidenceIds",
+          "taskQuote",
+          "requirement",
+          "condition",
+          "status",
+          "currentEvidence",
+          "remainingGap",
+          "limit",
+          "contentChecks"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "contextLimits": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "scopeNote": {
+      "type": "string"
+    },
+    "closureCheck": {
+      "type": "object",
+      "properties": {
+        "openRequirementIds": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "limitedRequirementIds": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "decision": {
+          "type": "string",
+          "enum": [
+            "material_gaps_present",
+            "assessable_requirements_met",
+            "assessment_limited"
+          ]
+        }
+      },
+      "required": [
+        "openRequirementIds",
+        "limitedRequirementIds",
+        "decision"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "required": [
+    "requirements",
+    "contextLimits",
+    "scopeNote",
+    "closureCheck"
+  ],
+  "additionalProperties": false
+}
